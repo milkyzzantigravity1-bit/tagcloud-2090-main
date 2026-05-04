@@ -5,6 +5,7 @@ import { register } from '$lib/server/auth/service';
 import { VERIFICATION_TTL_HOURS } from '$lib/server/auth/verification';
 import { sendVerificationEmail } from '$lib/server/email/verification';
 import { checkAuthRateLimit } from '$lib/server/voting/rate-limit';
+import { log } from '$lib/server/log';
 import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ request, url, getClientAddress }) => {
@@ -41,7 +42,7 @@ export const POST: RequestHandler = async ({ request, url, getClientAddress }) =
   } catch (err) {
     // Не возвращаем 500: пользователь может запросить переотправку через
     // /api/auth/resend-verification. В логи кладём детали для отладки SMTP.
-    console.error('[auth/register] sendVerificationEmail failed', err instanceof Error ? err.message : err);
+    log.error('register_send_verification_failed', { err: err instanceof Error ? err.message : String(err) });
   }
 
   return json(

@@ -13,6 +13,7 @@
 | `tagcloud-backup.service` | systemd unit для бэкап-задачи (вызывает `scripts/ops/backup.sh`). |
 | `tagcloud-backup.timer` | systemd timer — ежедневно в 03:30 UTC. |
 | `backup.env.example` | Конфиг бэкапа (DATABASE_URL + restic-репозиторий + пароль). |
+| `tagcloud@.service` | Шаблон systemd для multi-instance (горизонтальное масштабирование под 1000+ concurrent). |
 
 ## Первый деплой (типовой self-host)
 
@@ -124,3 +125,61 @@ systemctl restart tagcloud
 Можно временно деплоить по IP без TLS — раскомментируйте блок `:80` в
 `Caddyfile.example` и удалите блок `yourdomain.tld {…}`. После регистрации
 домена верните как было и перезагрузите Caddy.
+
+## Масштабирование под 1000+ concurrent
+
+Архитектура изначально готова к multi-instance: Postgres `FOR UPDATE SKIP
+LOCKED` в cron и Redis-агрегаты за пределами процесса исключают конфликты
+при параллельном запуске нескольких Node-процессов на одной машине.
+
+### Профиль одиночного инстанса (рекомендуется до 500 concurrent)
+
+`tagcloud.service` запускает один процесс на порту 3000. Тяжёлый рендер
+PNG (`d3-cloud + canvas`) уже вынесен в worker_threads-пул через
+[piscina][piscina] (см. `src/lib/server/cloud/render-png.ts`), так что
+event loop не блокируется. На 4-vCPU домашнем сервере одного процесса
+обычно хватает.
+
+[piscina]: https://github.com/piscinajs/piscina
+
+### Профиль multi-instance (для 1000+ concurrent или multi-CPU)
+
+Запустите N процессов на разных портах через template-unit
+`tagcloud@.service` и распределите трафик через Caddy `lb_policy`:
+
+```bash
+cp deploy/tagcloud@.service /etc/systemd/system/
+systemctl daemon-reload
+# Например, 4 инстанса на портах 3001–3004:
+systemctl enable --now tagcloud@3001 tagcloud@3002 tagcloud@3003 tagcloud@3004
+systemctl disable --now tagcloud   # отключить single-instance
+```
+
+В `Caddyfile.example` есть закомментированный блок load_balancing —
+раскомментируйте и подставьте список портов. Балансировщик отправит
+запрос на свободный upstream (least_conn). WS-сессия закрепится за
+выбранным upstream'ом (sticky через cookie или `client_ip_hash`), что
+важно для in-process realtime broadcast.
+
+**Расчёт ёмкости:**
+- 1 vCPU + 512MB на инстанс минимум.
+- worker_threads пул сам себя ограничивает (`min(cpus-1, 4)` на
+  процесс) — при 4 инстансах × 3 worker'а это до 12 параллельных PNG-рендеров.
+- Postgres connection limit: `postgres-js` по умолчанию держит 10
+  коннекций на инстанс — на 4 инстанса нужно `max_connections >= 50`
+  (стандартный 100 у postgres хватит с запасом).
+
+### Метрики и нагрузочное тестирование
+
+`/metrics` экспортирует Prometheus-формат: HTTP latency histogram,
+voting throughput, WS-коннекты, render-time. Ограничьте доступ через
+ACL Caddy (см. `Caddyfile.example`) или установите `METRICS_TOKEN` в
+`tagcloud.env`. Для нагрузочного теста удобен `oha`:
+
+```bash
+oha -c 200 -n 50000 'https://yourdomain.tld/api/surveys/CODE/answer'
+```
+
+Следить за SLO в Grafana или просто `curl /metrics | grep
+http_request_duration`. Если p95 поднимается выше 500мс — увеличить
+число инстансов.

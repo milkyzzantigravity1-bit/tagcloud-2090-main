@@ -1,5 +1,6 @@
 import Redis from 'ioredis';
 import { env } from '$env/dynamic/private';
+import { log } from './log';
 
 const url = env.REDIS_URL;
 if (!url) throw new Error('REDIS_URL is not set');
@@ -12,7 +13,7 @@ export const redis = new Redis(url, {
 });
 
 redis.on('error', (err) => {
-  console.error('[redis] error:', err.message);
+  log.error('redis_error', { err: err.message });
 });
 
 export async function pingRedis(): Promise<boolean> {

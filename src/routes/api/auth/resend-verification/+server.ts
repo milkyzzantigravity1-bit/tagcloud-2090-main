@@ -10,6 +10,7 @@ import {
 } from '$lib/server/auth/verification';
 import { sendVerificationEmail } from '$lib/server/email/verification';
 import { checkAuthRateLimit } from '$lib/server/voting/rate-limit';
+import { log } from '$lib/server/log';
 import type { RequestHandler } from './$types';
 
 const Body = z.object({ email: z.string().email().max(254) });
@@ -47,10 +48,9 @@ export const POST: RequestHandler = async ({ request, url, getClientAddress }) =
         ttlHours: VERIFICATION_TTL_HOURS
       });
     } catch (err) {
-      console.error(
-        '[auth/resend-verification] send failed',
-        err instanceof Error ? err.message : err
-      );
+      log.error('resend_verification_send_failed', {
+        err: err instanceof Error ? err.message : String(err)
+      });
     }
   }
 
