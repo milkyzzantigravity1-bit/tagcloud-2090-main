@@ -21,7 +21,10 @@ function statusForError(code: string): number {
 export const POST: RequestHandler = async ({ params, request, getClientAddress }) => {
   const code = params.code!;
   if (!isValidCode(code)) {
-    return json({ error: { code: 'invalid_code', message: 'Некорректный код опроса' } }, { status: 400 });
+    return json(
+      { error: { code: 'invalid_code', message: 'Некорректный код опроса' } },
+      { status: 400 }
+    );
   }
 
   const ip = getClientAddress();
@@ -44,10 +47,7 @@ export const POST: RequestHandler = async ({ params, request, getClientAddress }
   const raw = await request.json().catch(() => null);
   const parsed = SubmitAnswersSchema.safeParse(raw);
   if (!parsed.success) {
-    return json(
-      { error: { code: 'invalid_input', issues: parsed.error.issues } },
-      { status: 400 }
-    );
+    return json({ error: { code: 'invalid_input', issues: parsed.error.issues } }, { status: 400 });
   }
 
   if (await hasVoted(ip, code)) {

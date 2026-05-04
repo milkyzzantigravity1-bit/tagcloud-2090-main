@@ -14,9 +14,16 @@ export const CreateSurveySchema = z
     title: z.string().trim().max(200).optional(),
     caseSensitive: z.boolean().default(false),
     colorScheme: z.enum(['mono', 'random', 'custom']),
-    customPalette: z.array(z.string().regex(HEX_COLOR, 'Цвет должен быть в формате #RRGGBB')).min(1).max(10).optional(),
+    customPalette: z
+      .array(z.string().regex(HEX_COLOR, 'Цвет должен быть в формате #RRGGBB'))
+      .min(1)
+      .max(10)
+      .optional(),
     expiresAt: z.coerce.date(),
-    questions: z.array(QuestionInputSchema).min(1, 'Нужен хотя бы один вопрос').max(50, 'Не больше 50 вопросов')
+    questions: z
+      .array(QuestionInputSchema)
+      .min(1, 'Нужен хотя бы один вопрос')
+      .max(50, 'Не больше 50 вопросов')
   })
   .refine((d) => d.colorScheme !== 'custom' || (d.customPalette && d.customPalette.length > 0), {
     message: 'customPalette обязательна при colorScheme=custom',

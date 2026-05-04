@@ -3,10 +3,7 @@ import { palette as brand } from './theme';
 
 const BRAND_PALETTE = [brand.navy, brand.blue, brand.gold];
 
-export function colorPicker(
-  scheme: ColorScheme,
-  palette?: string[] | null
-): () => string {
+export function colorPicker(scheme: ColorScheme, palette?: string[] | null): () => string {
   if (scheme === 'mono') return () => brand.navy;
   if (scheme === 'random') {
     return () => BRAND_PALETTE[Math.floor(Math.random() * BRAND_PALETTE.length)];

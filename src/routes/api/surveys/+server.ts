@@ -7,19 +7,22 @@ import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ request, url, locals }) => {
   if (!locals.user) {
-    return json({ error: { code: 'unauthorized', message: 'Войди, чтобы создать опрос' } }, { status: 401 });
+    return json(
+      { error: { code: 'unauthorized', message: 'Войди, чтобы создать опрос' } },
+      { status: 401 }
+    );
   }
 
   const raw = await request.json().catch(() => null);
   const parsed = CreateSurveySchema.safeParse(raw);
   if (!parsed.success) {
-    return json(
-      { error: { code: 'invalid_input', issues: parsed.error.issues } },
-      { status: 400 }
-    );
+    return json({ error: { code: 'invalid_input', issues: parsed.error.issues } }, { status: 400 });
   }
 
-  const result = await createSurvey(parsed.data, { userId: locals.user.id, email: locals.user.email });
+  const result = await createSurvey(parsed.data, {
+    userId: locals.user.id,
+    email: locals.user.email
+  });
   const baseUrl = env.PUBLIC_BASE_URL || url.origin;
   const respondentUrl = `${baseUrl}/r/${result.code}`;
   const dashboardUrl = `${baseUrl}/s/${result.code}`;

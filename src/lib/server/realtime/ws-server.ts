@@ -9,21 +9,24 @@ import { addSubscriber, getRoom, removeSubscriber } from './broadcast';
 
 const wss = new WebSocketServer({ noServer: true });
 
-wss.on('connection', async (ws: WebSocket, _req: IncomingMessage, ctx: { code: string; questionIds: string[] }) => {
-  const room = getRoom(ctx.code, ctx.questionIds);
-  await addSubscriber(room, ws);
+wss.on(
+  'connection',
+  async (ws: WebSocket, _req: IncomingMessage, ctx: { code: string; questionIds: string[] }) => {
+    const room = getRoom(ctx.code, ctx.questionIds);
+    await addSubscriber(room, ws);
 
-  ws.on('close', () => removeSubscriber(room, ws));
-  ws.on('error', () => removeSubscriber(room, ws));
-  ws.on('message', (raw) => {
-    try {
-      const msg = JSON.parse(raw.toString());
-      if (msg.type === 'ping') ws.send(JSON.stringify({ type: 'pong' }));
-    } catch {
-      /* ignore */
-    }
-  });
-});
+    ws.on('close', () => removeSubscriber(room, ws));
+    ws.on('error', () => removeSubscriber(room, ws));
+    ws.on('message', (raw) => {
+      try {
+        const msg = JSON.parse(raw.toString());
+        if (msg.type === 'ping') ws.send(JSON.stringify({ type: 'pong' }));
+      } catch {
+        /* ignore */
+      }
+    });
+  }
+);
 
 export async function handleUpgrade(
   req: IncomingMessage,

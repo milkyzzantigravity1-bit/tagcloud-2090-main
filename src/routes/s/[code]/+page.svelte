@@ -169,7 +169,9 @@
 <header class="title-row">
   <div>
     <h1>{survey.title ?? 'Опрос'}</h1>
-    <p class="muted">Истекает: {fmtDate(survey.expiresAt)} · Статус: {survey.status} · Голосов: {totalVotes}</p>
+    <p class="muted">
+      Истекает: {fmtDate(survey.expiresAt)} · Статус: {survey.status} · Голосов: {totalVotes}
+    </p>
   </div>
   <div class="title-actions">
     {#if survey.status === 'active'}
@@ -178,7 +180,11 @@
       </button>
     {/if}
     <div class="ws-state ws-{wsState}" title="Соединение с сервером">
-      {wsState === 'open' ? '● live' : wsState === 'connecting' ? '○ подключение' : '○ переподключение'}
+      {wsState === 'open'
+        ? '● live'
+        : wsState === 'connecting'
+          ? '○ подключение'
+          : '○ переподключение'}
     </div>
   </div>
 </header>
@@ -195,15 +201,15 @@
     {#if survey.status === 'sent'}
       ✓ Опрос завершён. Письмо с результатами отправлено на <strong>{survey.creatorEmail}</strong>.
     {:else if survey.status === 'failed'}
-      ⚠ Опрос завершён, но <strong>письмо не дошло</strong> (проверь сеть/SMTP).
-      Можно скачать CSV ниже или повторить отправку:
+      ⚠ Опрос завершён, но <strong>письмо не дошло</strong> (проверь сеть/SMTP). Можно скачать CSV
+      ниже или повторить отправку:
       <button class="primary inline-btn" onclick={retrySend} disabled={retrying}>
         {retrying ? 'Отправляем…' : 'Повторить отправку'}
       </button>
     {:else if survey.status === 'expired'}
       ⏳ Голосование закрыто, идёт обработка результатов и отправка email…
       <button class="ghost inline-btn" onclick={() => location.reload()}>Обновить</button>
-      <br>
+      <br />
       Если состояние не меняется больше минуты — нажми ниже:
       <button class="primary inline-btn" onclick={retrySend} disabled={retrying}>
         {retrying ? 'Отправляем…' : 'Принудительно отправить'}
@@ -278,8 +284,13 @@
     gap: var(--space-4);
     margin-bottom: var(--space-8);
   }
-  h1 { margin-bottom: var(--space-1); }
-  .muted { color: var(--c-muted); margin: 0; }
+  h1 {
+    margin-bottom: var(--space-1);
+  }
+  .muted {
+    color: var(--c-muted);
+    margin: 0;
+  }
   .title-actions {
     display: flex;
     align-items: center;
@@ -293,9 +304,17 @@
     border: 1px solid var(--c-border);
     white-space: nowrap;
   }
-  .ws-open { color: var(--c-blue); border-color: var(--c-blue); }
-  .ws-connecting { color: var(--c-muted); }
-  .ws-closed { color: var(--c-danger); border-color: var(--c-danger); }
+  .ws-open {
+    color: var(--c-blue);
+    border-color: var(--c-blue);
+  }
+  .ws-connecting {
+    color: var(--c-muted);
+  }
+  .ws-closed {
+    color: var(--c-danger);
+    border-color: var(--c-danger);
+  }
 
   button.danger {
     background: transparent;
@@ -308,8 +327,13 @@
     font-size: 0.875rem;
     cursor: pointer;
   }
-  button.danger:hover { background: #fef2f2; }
-  button.danger:disabled { opacity: 0.5; cursor: not-allowed; }
+  button.danger:hover {
+    background: #fef2f2;
+  }
+  button.danger:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 
   .banner-error {
     background: #fef2f2;
@@ -346,7 +370,10 @@
     color: var(--c-navy);
     border-color: var(--c-border);
   }
-  .inline-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .inline-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 
   .grid {
     display: grid;
@@ -399,8 +426,13 @@
     font-family: inherit;
     font-size: 0.875rem;
   }
-  button:disabled { opacity: 0.5; cursor: not-allowed; }
-  .qr-card { text-align: center; }
+  button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .qr-card {
+    text-align: center;
+  }
   .qr {
     width: 180px;
     height: 180px;
@@ -409,14 +441,18 @@
     border-radius: var(--radius);
   }
 
-  .cloud-card { margin-top: var(--space-4); }
+  .cloud-card {
+    margin-top: var(--space-4);
+  }
   .cloud-head {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: var(--space-3);
   }
-  .cloud-head h2 { margin: 0; }
+  .cloud-head h2 {
+    margin: 0;
+  }
   .cloud-actions {
     display: flex;
     gap: var(--space-2);
@@ -490,12 +526,20 @@
   }
 
   @media (max-width: 720px) {
-    .title-row { flex-direction: column; align-items: flex-start; }
+    .title-row {
+      flex-direction: column;
+      align-items: flex-start;
+    }
     .grid {
       grid-template-columns: 1fr;
     }
-    .qr-card { order: -1; }
-    .qr { width: 200px; height: 200px; }
+    .qr-card {
+      order: -1;
+    }
+    .qr {
+      width: 200px;
+      height: 200px;
+    }
     .big-code {
       font-size: 2rem;
       text-align: center;
@@ -505,10 +549,24 @@
       align-items: flex-start;
       gap: var(--space-3);
     }
-    .cloud-actions { width: 100%; }
-    .cloud-actions .ghost-link, .cloud-actions button { flex: 1; text-align: center; }
-    .canvas-wrap { aspect-ratio: 4 / 5; }
-    .tabs { overflow-x: auto; flex-wrap: nowrap; }
-    .tab { white-space: nowrap; flex-shrink: 0; }
+    .cloud-actions {
+      width: 100%;
+    }
+    .cloud-actions .ghost-link,
+    .cloud-actions button {
+      flex: 1;
+      text-align: center;
+    }
+    .canvas-wrap {
+      aspect-ratio: 4 / 5;
+    }
+    .tabs {
+      overflow-x: auto;
+      flex-wrap: nowrap;
+    }
+    .tab {
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
   }
 </style>

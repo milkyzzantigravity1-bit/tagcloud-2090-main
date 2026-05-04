@@ -3,6 +3,8 @@ import { db } from '../db';
 import { surveys, type Survey } from '../schema';
 import { processExpired } from './process';
 import { purgeExpiredSessions } from '../auth/sessions';
+import { purgeExpiredVerificationTokens } from '../auth/verification';
+import { log, withLogContext } from '../log';
 
 const TICK_MS = 60_000;
 const BATCH = 20;
@@ -30,7 +32,7 @@ async function claimBatch(now: Date, stuckThreshold: Date): Promise<Survey[]> {
   // Date как timestamp без подсказки, передаём ISO-строку.
   const nowIso = now.toISOString();
   const stuckIso = stuckThreshold.toISOString();
-  const result = await db.execute(sql`
+  const rows = await db.execute<Survey>(sql`
     UPDATE ${surveys}
     SET status = 'expired'
     WHERE id IN (
@@ -43,7 +45,7 @@ async function claimBatch(now: Date, stuckThreshold: Date): Promise<Survey[]> {
     )
     RETURNING *
   `);
-  return (result as unknown as { rows?: Survey[] }).rows ?? (result as unknown as Survey[]);
+  return Array.from(rows);
 }
 
 async function scan(): Promise<void> {
@@ -55,9 +57,9 @@ async function scan(): Promise<void> {
 
     const claimed = await claimBatch(now, stuckThreshold);
     if (claimed.length > 0) {
-      console.log(`[cron] claimed ${claimed.length} surveys to process`);
+      log.info('cron_claimed_surveys', { count: claimed.length });
       for (const s of claimed) {
-        await processExpired(s);
+        await withLogContext({ surveyCode: s.code, surveyId: s.id }, () => processExpired(s));
       }
     }
 
@@ -65,13 +67,23 @@ async function scan(): Promise<void> {
       lastSessionPurgeAt = now.getTime();
       try {
         const removed = await purgeExpiredSessions();
-        if (removed > 0) console.log(`[cron] purged ${removed} expired sessions`);
+        if (removed > 0) log.info('cron_purged_sessions', { removed });
       } catch (err) {
-        console.error('[cron] session purge failed:', err instanceof Error ? err.message : err);
+        log.error('cron_session_purge_failed', {
+          err: err instanceof Error ? err.message : String(err)
+        });
+      }
+      try {
+        const removed = await purgeExpiredVerificationTokens();
+        if (removed > 0) log.info('cron_purged_verification_tokens', { removed });
+      } catch (err) {
+        log.error('cron_token_purge_failed', {
+          err: err instanceof Error ? err.message : String(err)
+        });
       }
     }
   } catch (err) {
-    console.error('[cron] scan failed:', err instanceof Error ? err.message : err);
+    log.error('cron_scan_failed', { err: err instanceof Error ? err.message : String(err) });
   } finally {
     scanning = false;
   }
@@ -79,7 +91,7 @@ async function scan(): Promise<void> {
 
 export function startExpiryCron(): void {
   if (timer) return;
-  console.log('[cron] expiry scanner started (60s tick)');
+  log.info('cron_started', { tickMs: TICK_MS });
   timer = setInterval(() => void scan(), TICK_MS);
   void scan();
 }

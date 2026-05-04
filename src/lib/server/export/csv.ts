@@ -2,14 +2,9 @@ import { eq } from 'drizzle-orm';
 import { db } from '../db';
 import { questions } from '../schema';
 import { aggregateQuestion } from '../cloud/aggregate';
+import { CSV_BOM, csvEscape } from './csv-escape';
 
-// UTF-8 BOM — нужен Excel'ю для корректной кодировки кириллицы при открытии CSV.
-const BOM = '\uFEFF';
-
-function csvEscape(value: string): string {
-  if (/[",\n\r]/.test(value)) return '"' + value.replace(/"/g, '""') + '"';
-  return value;
-}
+export { csvEscape } from './csv-escape';
 
 export async function buildSurveyCsv(surveyId: string): Promise<string> {
   const qs = await db
@@ -18,9 +13,15 @@ export async function buildSurveyCsv(surveyId: string): Promise<string> {
     .where(eq(questions.surveyId, surveyId))
     .orderBy(questions.position);
 
+  // Параллельный fan-out по вопросам: для опроса с 30+ вопросами это
+  // заметно ускоряет экспорт (был последовательный round-trip на каждый
+  // вопрос). Порядок сохраняем через индекс в map+await.
+  const aggregates = await Promise.all(qs.map((q) => aggregateQuestion(q.id, 1000)));
+
   const rows: string[] = ['question,word,count'];
-  for (const q of qs) {
-    const top = await aggregateQuestion(q.id, 1000);
+  for (let i = 0; i < qs.length; i++) {
+    const q = qs[i];
+    const top = aggregates[i];
     if (top.length === 0) {
       rows.push([csvEscape(q.text), '', '0'].join(','));
       continue;
@@ -29,5 +30,5 @@ export async function buildSurveyCsv(surveyId: string): Promise<string> {
       rows.push([csvEscape(q.text), csvEscape(word), String(count)].join(','));
     }
   }
-  return BOM + rows.join('\n');
+  return CSV_BOM + rows.join('\n');
 }

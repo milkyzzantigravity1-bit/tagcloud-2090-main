@@ -1,6 +1,7 @@
 import type { WebSocket } from 'ws';
 import { redis } from '../redis';
 import { encode, type ServerMsg } from './protocol';
+import { incWsConnected, decWsConnected } from '../metrics';
 import type { CloudWord } from '$lib/types/cloud';
 
 const TICK_MS = 2500;
@@ -49,6 +50,7 @@ export function getRoom(code: string, questionIds: string[]): Room {
 
 export async function addSubscriber(room: Room, ws: WebSocket): Promise<void> {
   room.subscribers.add(ws);
+  incWsConnected();
   ensureTicker();
   for (const qid of room.questionIds) {
     const words = await fetchTop(qid);
@@ -58,7 +60,9 @@ export async function addSubscriber(room: Room, ws: WebSocket): Promise<void> {
 }
 
 export function removeSubscriber(room: Room, ws: WebSocket): void {
-  room.subscribers.delete(ws);
+  if (room.subscribers.delete(ws)) {
+    decWsConnected();
+  }
   if (room.subscribers.size === 0) {
     rooms.delete(room.code);
   }
@@ -70,6 +74,7 @@ export function notifyClosed(code: string, reason: 'expired' | 'sent' | 'failed'
   for (const ws of room.subscribers) {
     send(ws, { type: 'closed', reason });
     if (ws.readyState === ws.OPEN) ws.close(1000, reason);
+    decWsConnected();
   }
   rooms.delete(code);
 }

@@ -6,6 +6,12 @@ const RATE_WINDOW_SEC = 60;
 const RATE_MAX = 30;
 const MIN_VOTED_TTL_SEC = 60;
 
+// Auth-эндпоинты — отдельные более жёсткие бакеты, чтобы перебор пароля
+// не попадал в общий "30 запросов/мин" бюджет голосовалок.
+const AUTH_WINDOW_SEC = 15 * 60;
+const AUTH_IP_MAX = 30; // 30 попыток с одного IP за 15 минут
+const AUTH_EMAIL_MAX = 5; // 5 попыток на конкретный email за 15 минут
+
 function todaySaltKey(): string {
   const d = new Date();
   return `salt:${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}${String(d.getUTCDate()).padStart(2, '0')}`;
@@ -48,4 +54,39 @@ export async function markVoted(ip: string, code: string, expiresAt: Date): Prom
   const hash = await ipHash(ip);
   const ttlSec = Math.max(MIN_VOTED_TTL_SEC, Math.floor((expiresAt.getTime() - Date.now()) / 1000));
   await redis.setex(`voted:${hash}:${code}`, ttlSec, '1');
+}
+
+/**
+ * Рейт-лимит для auth-эндпоинтов (`/api/auth/login`, `/register`).
+ * Считаем два независимых бакета и блокируем, если превышен любой из них:
+ *   - по IP (защита от brute-force с одного хоста);
+ *   - по email (защита от перебора пароля для конкретного аккаунта,
+ *     даже если идёт с пула IP).
+ *
+ * Email нормализуется (`trim().toLowerCase()`) и хэшируется тем же
+ * salted-sha256, чтобы Redis не хранил адреса в открытом виде.
+ */
+export async function checkAuthRateLimit(ip: string, email: string): Promise<RateLimitResult> {
+  const ipKey = `auth_rl:ip:${await ipHash(ip)}`;
+  const emailKey = `auth_rl:email:${await emailHash(email)}`;
+
+  // INCR-ы выполняем последовательно, но без транзакции: гонка может пропустить
+  // 1–2 попытки сверх лимита, для защиты от перебора это не существенно.
+  const ipCnt = await redis.incr(ipKey);
+  if (ipCnt === 1) await redis.expire(ipKey, AUTH_WINDOW_SEC);
+
+  const emailCnt = await redis.incr(emailKey);
+  if (emailCnt === 1) await redis.expire(emailKey, AUTH_WINDOW_SEC);
+
+  if (ipCnt > AUTH_IP_MAX || emailCnt > AUTH_EMAIL_MAX) {
+    const [ipTtl, emailTtl] = await Promise.all([redis.ttl(ipKey), redis.ttl(emailKey)]);
+    const retryAfterSec = Math.max(ipTtl, emailTtl, 60);
+    return { allowed: false, retryAfterSec };
+  }
+  return { allowed: true };
+}
+
+async function emailHash(email: string): Promise<string> {
+  const salt = await getOrCreateSalt();
+  return createHash('sha256').update(`email:${email.trim().toLowerCase()}:${salt}`).digest('hex');
 }
