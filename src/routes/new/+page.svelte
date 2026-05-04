@@ -66,7 +66,7 @@
         const issue = data.error?.issues?.[0];
         errorMessage = issue
           ? `${issue.path?.join('.') ?? ''}: ${issue.message}`
-          : data.error?.message ?? `Ошибка ${r.status}`;
+          : (data.error?.message ?? `Ошибка ${r.status}`);
         return;
       }
       result = data;
@@ -130,10 +130,18 @@
     <fieldset>
       <legend>Срок действия</legend>
       <div class="radios">
-        <label class="radio"><input type="radio" bind:group={durationPreset} value="1h" /> 1 час</label>
-        <label class="radio"><input type="radio" bind:group={durationPreset} value="1d" /> 1 день</label>
-        <label class="radio"><input type="radio" bind:group={durationPreset} value="7d" /> 1 неделя</label>
-        <label class="radio"><input type="radio" bind:group={durationPreset} value="custom" /> Указать дату</label>
+        <label class="radio"
+          ><input type="radio" bind:group={durationPreset} value="1h" /> 1 час</label
+        >
+        <label class="radio"
+          ><input type="radio" bind:group={durationPreset} value="1d" /> 1 день</label
+        >
+        <label class="radio"
+          ><input type="radio" bind:group={durationPreset} value="7d" /> 1 неделя</label
+        >
+        <label class="radio"
+          ><input type="radio" bind:group={durationPreset} value="custom" /> Указать дату</label
+        >
       </div>
       {#if durationPreset === 'custom'}
         <input type="datetime-local" bind:value={customExpiresAt} required />
@@ -148,9 +156,15 @@
     <fieldset>
       <legend>Цветовая схема облака</legend>
       <div class="radios">
-        <label class="radio"><input type="radio" bind:group={colorScheme} value="mono" /> Чёрно-белая</label>
-        <label class="radio"><input type="radio" bind:group={colorScheme} value="random" /> Случайные цвета бренда</label>
-        <label class="radio"><input type="radio" bind:group={colorScheme} value="custom" /> Своя палитра</label>
+        <label class="radio"
+          ><input type="radio" bind:group={colorScheme} value="mono" /> Чёрно-белая</label
+        >
+        <label class="radio"
+          ><input type="radio" bind:group={colorScheme} value="random" /> Случайные цвета бренда</label
+        >
+        <label class="radio"
+          ><input type="radio" bind:group={colorScheme} value="custom" /> Своя палитра</label
+        >
       </div>
       {#if colorScheme === 'custom'}
         <div class="palette">
@@ -158,10 +172,20 @@
             <div class="color-row">
               <input type="color" bind:value={customPalette[i]} />
               <input type="text" bind:value={customPalette[i]} pattern="^#[0-9A-Fa-f]{'{6}'}$" />
-              <button type="button" class="ghost mini" onclick={() => removeColor(i)} disabled={customPalette.length === 1}>×</button>
+              <button
+                type="button"
+                class="ghost mini"
+                onclick={() => removeColor(i)}
+                disabled={customPalette.length === 1}>×</button
+              >
             </div>
           {/each}
-          <button type="button" class="ghost" onclick={addColor} disabled={customPalette.length >= 10}>
+          <button
+            type="button"
+            class="ghost"
+            onclick={addColor}
+            disabled={customPalette.length >= 10}
+          >
             + Добавить цвет ({customPalette.length}/10)
           </button>
         </div>
@@ -174,12 +198,26 @@
         <div class="question">
           <div class="q-head">
             <strong>Вопрос {i + 1}</strong>
-            <button type="button" class="ghost mini" onclick={() => removeQuestion(i)} disabled={questions.length === 1}>×</button>
+            <button
+              type="button"
+              class="ghost mini"
+              onclick={() => removeQuestion(i)}
+              disabled={questions.length === 1}>×</button
+            >
           </div>
-          <textarea bind:value={questions[i].text} required maxlength="500" placeholder="Опишите одним словом ваше настроение"></textarea>
+          <textarea
+            bind:value={questions[i].text}
+            required
+            maxlength="500"
+            placeholder="Опишите одним словом ваше настроение"
+          ></textarea>
           <div class="radios">
-            <label class="radio"><input type="radio" bind:group={questions[i].answerType} value="single" /> Одно слово</label>
-            <label class="radio"><input type="radio" bind:group={questions[i].answerType} value="multi" /> Несколько слов</label>
+            <label class="radio"
+              ><input type="radio" bind:group={questions[i].answerType} value="single" /> Одно слово</label
+            >
+            <label class="radio"
+              ><input type="radio" bind:group={questions[i].answerType} value="multi" /> Несколько слов</label
+            >
           </div>
         </div>
       {/each}
@@ -394,14 +432,40 @@
   }
 
   @media (max-width: 480px) {
-    fieldset { padding: var(--space-3); }
-    .question { padding: var(--space-3); }
-    .radios { gap: var(--space-2); }
-    button.primary, a.primary { width: 100%; text-align: center; padding: var(--space-4); }
-    .big-code { font-size: 2rem; word-break: break-all; }
-    .link-row { flex-direction: column; align-items: stretch; }
-    .link-row code { white-space: normal; word-break: break-all; }
-    .link-row button { width: 100%; }
-    .qr { width: 100%; height: auto; aspect-ratio: 1; }
+    fieldset {
+      padding: var(--space-3);
+    }
+    .question {
+      padding: var(--space-3);
+    }
+    .radios {
+      gap: var(--space-2);
+    }
+    button.primary,
+    a.primary {
+      width: 100%;
+      text-align: center;
+      padding: var(--space-4);
+    }
+    .big-code {
+      font-size: 2rem;
+      word-break: break-all;
+    }
+    .link-row {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .link-row code {
+      white-space: normal;
+      word-break: break-all;
+    }
+    .link-row button {
+      width: 100%;
+    }
+    .qr {
+      width: 100%;
+      height: auto;
+      aspect-ratio: 1;
+    }
   }
 </style>

@@ -10,8 +10,8 @@
 <section class="hero">
   <h1>Облако тегов</h1>
   <p class="lead">
-    Анонимные опросы для школьных мероприятий. Респонденты отвечают одним
-    или несколькими словами, результаты собираются в живое облако тегов.
+    Анонимные опросы для школьных мероприятий. Респонденты отвечают одним или несколькими словами,
+    результаты собираются в живое облако тегов.
   </p>
 
   {#if data.user}
@@ -24,7 +24,9 @@
       <a class="cta primary" href="/register">Создать аккаунт →</a>
       <a class="cta ghost" href="/login">Войти</a>
     </div>
-    <p class="hint">Регистрация — только для создателей опросов. Респонденты заходят анонимно по ссылке или QR.</p>
+    <p class="hint">
+      Регистрация — только для создателей опросов. Респонденты заходят анонимно по ссылке или QR.
+    </p>
   {/if}
 </section>
 
@@ -99,7 +101,10 @@
     padding: var(--space-6);
     border-radius: var(--radius-lg);
   }
-  .feature .ico { font-size: 1.6rem; margin-bottom: var(--space-3); }
+  .feature .ico {
+    font-size: 1.6rem;
+    margin-bottom: var(--space-3);
+  }
   .feature h2 {
     font-size: 1rem;
     color: var(--c-navy);
@@ -114,8 +119,15 @@
   }
 
   @media (max-width: 480px) {
-    h1 { font-size: 1.75rem; }
-    .lead { font-size: 1rem; }
-    .cta-row .cta { width: 100%; text-align: center; }
+    h1 {
+      font-size: 1.75rem;
+    }
+    .lead {
+      font-size: 1rem;
+    }
+    .cta-row .cta {
+      width: 100%;
+      text-align: center;
+    }
   }
 </style>

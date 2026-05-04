@@ -8,11 +8,16 @@
 
   function statusLabel(s: string): { text: string; className: string } {
     switch (s) {
-      case 'active': return { text: 'Активен', className: 'st-active' };
-      case 'sent': return { text: 'Завершён, письмо отправлено', className: 'st-sent' };
-      case 'failed': return { text: 'Завершён, ошибка отправки', className: 'st-failed' };
-      case 'expired': return { text: 'Истёк', className: 'st-expired' };
-      default: return { text: s, className: '' };
+      case 'active':
+        return { text: 'Активен', className: 'st-active' };
+      case 'sent':
+        return { text: 'Завершён, письмо отправлено', className: 'st-sent' };
+      case 'failed':
+        return { text: 'Завершён, ошибка отправки', className: 'st-failed' };
+      case 'expired':
+        return { text: 'Истёк', className: 'st-expired' };
+      default:
+        return { text: s, className: '' };
     }
   }
 
@@ -25,7 +30,10 @@
   let retrying = $state<string | null>(null);
 
   async function finishSurvey(code: string) {
-    if (!confirm('Точно завершить опрос ' + code + '? Голосование закроется, отчёт уйдёт на email.')) return;
+    if (
+      !confirm('Точно завершить опрос ' + code + '? Голосование закроется, отчёт уйдёт на email.')
+    )
+      return;
     finishing = code;
     try {
       const r = await fetch(`/api/surveys/${code}/finish`, { method: 'POST' });
@@ -90,10 +98,18 @@
         </div>
         <div class="actions">
           <a class="btn" href={`/s/${s.code}`}>Дашборд</a>
-          <a class="btn ghost" href={`/r/${s.code}`} target="_blank" rel="noopener">Ссылка для голосования ↗</a>
-          <button class="btn ghost" onclick={(e) => copy(`${location.origin}/r/${s.code}`, e)}>Копировать ссылку</button>
+          <a class="btn ghost" href={`/r/${s.code}`} target="_blank" rel="noopener"
+            >Ссылка для голосования ↗</a
+          >
+          <button class="btn ghost" onclick={(e) => copy(`${location.origin}/r/${s.code}`, e)}
+            >Копировать ссылку</button
+          >
           {#if s.status === 'active'}
-            <button class="btn danger" onclick={() => finishSurvey(s.code)} disabled={finishing === s.code}>
+            <button
+              class="btn danger"
+              onclick={() => finishSurvey(s.code)}
+              disabled={finishing === s.code}
+            >
               {finishing === s.code ? 'Завершаем…' : 'Завершить'}
             </button>
           {:else if s.status === 'failed' || s.status === 'expired'}
@@ -114,7 +130,9 @@
     align-items: center;
     margin-bottom: var(--space-6);
   }
-  h1 { margin: 0; }
+  h1 {
+    margin: 0;
+  }
   .cta {
     background: var(--c-navy);
     color: white;
@@ -128,8 +146,17 @@
     padding: var(--space-12) 0;
     color: var(--c-muted);
   }
-  .empty p { margin-bottom: var(--space-4); }
-  .list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--space-3); }
+  .empty p {
+    margin-bottom: var(--space-4);
+  }
+  .list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
   .card {
     background: var(--c-surface);
     padding: var(--space-4);
@@ -148,17 +175,31 @@
     text-decoration: none;
     font-size: 1.0625rem;
   }
-  .title:hover { text-decoration: underline; }
+  .title:hover {
+    text-decoration: underline;
+  }
   .status {
     font-size: 0.8rem;
     padding: 2px 10px;
     border-radius: 999px;
     white-space: nowrap;
   }
-  .st-active { background: #DBEAFE; color: #1E3A8A; }
-  .st-sent { background: #DCFCE7; color: #166534; }
-  .st-failed { background: #FEE2E2; color: #991B1B; }
-  .st-expired { background: #F3F4F6; color: #4B5563; }
+  .st-active {
+    background: #dbeafe;
+    color: #1e3a8a;
+  }
+  .st-sent {
+    background: #dcfce7;
+    color: #166534;
+  }
+  .st-failed {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+  .st-expired {
+    background: #f3f4f6;
+    color: #4b5563;
+  }
   .meta {
     color: var(--c-muted);
     font-size: 0.875rem;
@@ -168,7 +209,9 @@
     align-items: center;
     margin-bottom: var(--space-3);
   }
-  .meta .dot { opacity: 0.5; }
+  .meta .dot {
+    opacity: 0.5;
+  }
   .code {
     font-family: 'SF Mono', Menlo, monospace;
     background: var(--c-bg);
@@ -204,9 +247,16 @@
     color: var(--c-danger);
     border: 1px solid var(--c-danger);
   }
-  .btn.danger:hover { background: #fef2f2; }
-  .btn.danger:disabled { opacity: 0.5; cursor: not-allowed; }
-  .btn:hover { text-decoration: none; }
+  .btn.danger:hover {
+    background: #fef2f2;
+  }
+  .btn.danger:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .btn:hover {
+    text-decoration: none;
+  }
 
   @media (max-width: 640px) {
     .head {
@@ -214,10 +264,24 @@
       align-items: stretch;
       gap: var(--space-3);
     }
-    .cta { text-align: center; }
-    .card-head { flex-direction: column; align-items: flex-start; }
-    .meta { font-size: 0.8125rem; }
-    .actions { display: grid; grid-template-columns: 1fr; gap: var(--space-2); }
-    .btn { text-align: center; padding: var(--space-3); }
+    .cta {
+      text-align: center;
+    }
+    .card-head {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .meta {
+      font-size: 0.8125rem;
+    }
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: var(--space-2);
+    }
+    .btn {
+      text-align: center;
+      padding: var(--space-3);
+    }
   }
 </style>

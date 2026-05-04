@@ -42,7 +42,9 @@ export const POST: RequestHandler = async ({ request, url, getClientAddress }) =
   } catch (err) {
     // Не возвращаем 500: пользователь может запросить переотправку через
     // /api/auth/resend-verification. В логи кладём детали для отладки SMTP.
-    log.error('register_send_verification_failed', { err: err instanceof Error ? err.message : String(err) });
+    log.error('register_send_verification_failed', {
+      err: err instanceof Error ? err.message : String(err)
+    });
   }
 
   return json(

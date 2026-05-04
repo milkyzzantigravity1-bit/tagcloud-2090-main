@@ -4,10 +4,7 @@ import { z } from 'zod';
 import { env } from '$env/dynamic/private';
 import { db } from '$lib/server/db';
 import { users } from '$lib/server/schema';
-import {
-  createVerificationToken,
-  VERIFICATION_TTL_HOURS
-} from '$lib/server/auth/verification';
+import { createVerificationToken, VERIFICATION_TTL_HOURS } from '$lib/server/auth/verification';
 import { sendVerificationEmail } from '$lib/server/email/verification';
 import { checkAuthRateLimit } from '$lib/server/voting/rate-limit';
 import { log } from '$lib/server/log';

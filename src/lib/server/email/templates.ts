@@ -21,11 +21,16 @@ const BORDER = '#E5E7EB';
 function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (ch) => {
     switch (ch) {
-      case '&': return '&amp;';
-      case '<': return '&lt;';
-      case '>': return '&gt;';
-      case '"': return '&quot;';
-      default: return '&#39;';
+      case '&':
+        return '&amp;';
+      case '<':
+        return '&lt;';
+      case '>':
+        return '&gt;';
+      case '"':
+        return '&quot;';
+      default:
+        return '&#39;';
     }
   });
 }
@@ -70,11 +75,7 @@ export function resultsHtml(opts: ResultsTemplateInput): string {
 }
 
 export function resultsText(opts: ResultsTemplateInput): string {
-  const lines: string[] = [
-    `Результаты опроса: ${opts.surveyTitle}`,
-    `Код: ${opts.surveyCode}`,
-    ''
-  ];
+  const lines: string[] = [`Результаты опроса: ${opts.surveyTitle}`, `Код: ${opts.surveyCode}`, ''];
   opts.questions.forEach((q, i) => {
     lines.push(`Вопрос ${i + 1}: ${q.question.text}`);
     lines.push(`  Голосов: ${q.totalVotes}`);

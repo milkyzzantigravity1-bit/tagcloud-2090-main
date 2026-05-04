@@ -27,10 +27,7 @@ export async function createVerificationToken(
       .update(emailVerificationTokens)
       .set({ usedAt: new Date() })
       .where(
-        and(
-          eq(emailVerificationTokens.userId, userId),
-          isNull(emailVerificationTokens.usedAt)
-        )
+        and(eq(emailVerificationTokens.userId, userId), isNull(emailVerificationTokens.usedAt))
       );
 
     const [created] = await tx
