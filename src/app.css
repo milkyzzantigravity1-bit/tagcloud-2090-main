@@ -1,0 +1,78 @@
+:root {
+  --c-navy: #0E2A5C;
+  --c-blue: #2D9FDA;
+  --c-gold: #E0B73A;
+  --c-bg: #FFFFFF;
+  --c-surface: #F7F8FA;
+  --c-text: #1A1A1A;
+  --c-muted: #6B7280;
+  --c-border: #E5E7EB;
+  --c-danger: #DC2626;
+
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+
+  --radius: 8px;
+  --radius-lg: 12px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+
+  --shadow-sm: 0 1px 2px rgba(14, 42, 92, 0.06);
+  --shadow: 0 4px 12px rgba(14, 42, 92, 0.08);
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--c-bg);
+  color: var(--c-text);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--c-navy);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+h1, h2, h3 {
+  margin: 0 0 var(--space-4);
+  color: var(--c-navy);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+code {
+  font-family: 'SF Mono', Menlo, monospace;
+  background: var(--c-surface);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.9em;
+  word-break: break-all;
+}
+
+/* mobile breakpoints (используются в +layout.svelte и page-стилях) */
+@media (max-width: 480px) {
+  html, body { font-size: 15px; }
+  h1 { font-size: 1.5rem; }
+}

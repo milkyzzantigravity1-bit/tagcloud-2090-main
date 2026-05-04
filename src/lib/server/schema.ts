@@ -1,0 +1,82 @@
+import {
+  pgTable,
+  uuid,
+  varchar,
+  text,
+  boolean,
+  timestamp,
+  integer,
+  bigserial,
+  jsonb,
+  index,
+  pgEnum
+} from 'drizzle-orm/pg-core';
+
+export const colorScheme = pgEnum('color_scheme', ['mono', 'random', 'custom']);
+export const answerType = pgEnum('answer_type', ['single', 'multi']);
+export const surveyStatus = pgEnum('survey_status', ['active', 'expired', 'sent', 'failed']);
+
+export const users = pgTable('users', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  email: text('email').notNull().unique(),
+  passwordHash: text('password_hash'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+});
+
+export const sessions = pgTable('sessions', {
+  id: text('id').primaryKey(),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+}, (t) => ({
+  userIdx: index('sessions_user_idx').on(t.userId),
+  expiresIdx: index('sessions_expires_idx').on(t.expiresAt)
+}));
+
+export const surveys = pgTable('surveys', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  code: varchar('code', { length: 6 }).notNull().unique(),
+  creatorToken: uuid('creator_token').notNull().defaultRandom().unique(),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }),
+  title: text('title'),
+  creatorEmail: text('creator_email').notNull(),
+  caseSensitive: boolean('case_sensitive').notNull().default(false),
+  colorScheme: colorScheme('color_scheme').notNull().default('mono'),
+  customPalette: jsonb('custom_palette').$type<string[] | null>(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  status: surveyStatus('status').notNull().default('active'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+}, (t) => ({
+  expiresIdx: index('surveys_expires_status_idx').on(t.status, t.expiresAt),
+  userIdx: index('surveys_user_idx').on(t.userId, t.createdAt)
+}));
+
+export const questions = pgTable('questions', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  surveyId: uuid('survey_id')
+    .notNull()
+    .references(() => surveys.id, { onDelete: 'cascade' }),
+  text: text('text').notNull(),
+  answerType: answerType('answer_type').notNull(),
+  position: integer('position').notNull()
+}, (t) => ({
+  surveyIdx: index('questions_survey_idx').on(t.surveyId, t.position)
+}));
+
+export const responses = pgTable('responses', {
+  id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+  questionId: uuid('question_id')
+    .notNull()
+    .references(() => questions.id, { onDelete: 'cascade' }),
+  word: text('word').notNull(),
+  wordNorm: text('word_norm').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+}, (t) => ({
+  qWordIdx: index('responses_question_word_idx').on(t.questionId, t.wordNorm)
+}));
+
+export type Survey = typeof surveys.$inferSelect;
+export type Question = typeof questions.$inferSelect;
+export type Response = typeof responses.$inferSelect;

@@ -1,0 +1,34 @@
+import { z } from 'zod';
+
+const HEX_COLOR = /^#[0-9A-Fa-f]{6}$/;
+const HOUR_MS = 60 * 60 * 1000;
+const DAY_MS = 24 * HOUR_MS;
+
+export const QuestionInputSchema = z.object({
+  text: z.string().trim().min(1, 'Текст вопроса обязателен').max(500),
+  answerType: z.enum(['single', 'multi'])
+});
+
+export const CreateSurveySchema = z
+  .object({
+    title: z.string().trim().max(200).optional(),
+    caseSensitive: z.boolean().default(false),
+    colorScheme: z.enum(['mono', 'random', 'custom']),
+    customPalette: z.array(z.string().regex(HEX_COLOR, 'Цвет должен быть в формате #RRGGBB')).min(1).max(10).optional(),
+    expiresAt: z.coerce.date(),
+    questions: z.array(QuestionInputSchema).min(1, 'Нужен хотя бы один вопрос').max(50, 'Не больше 50 вопросов')
+  })
+  .refine((d) => d.colorScheme !== 'custom' || (d.customPalette && d.customPalette.length > 0), {
+    message: 'customPalette обязательна при colorScheme=custom',
+    path: ['customPalette']
+  })
+  .refine((d) => d.expiresAt.getTime() >= Date.now() + HOUR_MS - 60_000, {
+    message: 'Срок должен быть как минимум через 1 час',
+    path: ['expiresAt']
+  })
+  .refine((d) => d.expiresAt.getTime() <= Date.now() + 30 * DAY_MS, {
+    message: 'Срок не может быть больше 30 дней',
+    path: ['expiresAt']
+  });
+
+export type CreateSurveyInput = z.infer<typeof CreateSurveySchema>;
