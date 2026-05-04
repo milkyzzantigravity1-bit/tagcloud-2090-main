@@ -28,7 +28,10 @@ async function flush(): Promise<void> {
     }
     await pipeline.exec();
   } catch (err) {
-    console.error('[voting/submit] flush failed', err);
+    // Возвращаем неотданный пакет в начало буфера, чтобы повторить попытку
+    // на следующем тике — иначе голоса терялись бы при первой ошибке БД/Redis.
+    buffer.unshift(...batch);
+    console.error('[voting/submit] flush failed, requeued batch', err);
   } finally {
     flushing = false;
   }
@@ -60,6 +63,18 @@ export async function submitAnswers(processed: ProcessedAnswer[]): Promise<void>
   }
 }
 
+/**
+ * Дренирует in-memory очередь. Используется обработчиком сигналов
+ * остановки процесса в `hooks.server.ts`, чтобы не терять голоса при
+ * graceful shutdown (SIGTERM/SIGINT).
+ */
 export async function flushPending(): Promise<void> {
-  await flush();
+  // Несколько попыток на случай, если первая упадёт и положит batch обратно.
+  for (let i = 0; i < 3 && buffer.length > 0; i++) {
+    await flush();
+  }
+}
+
+export function pendingCount(): number {
+  return buffer.length;
 }

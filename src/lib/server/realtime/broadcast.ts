@@ -64,7 +64,7 @@ export function removeSubscriber(room: Room, ws: WebSocket): void {
   }
 }
 
-export function notifyClosed(code: string, reason: 'expired' | 'sent'): void {
+export function notifyClosed(code: string, reason: 'expired' | 'sent' | 'failed'): void {
   const room = rooms.get(code);
   if (!room) return;
   for (const ws of room.subscribers) {

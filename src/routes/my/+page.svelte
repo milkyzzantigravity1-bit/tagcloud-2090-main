@@ -32,8 +32,8 @@
       if (r.ok) {
         location.reload();
       } else {
-        const data = await r.json().catch(() => ({}));
-        alert(data?.error?.message ?? `Ошибка ${r.status}`);
+        const body = await r.json().catch(() => ({}));
+        alert(body?.error?.message ?? `Ошибка ${r.status}`);
       }
     } finally {
       finishing = null;
@@ -47,8 +47,8 @@
       if (r.ok) {
         location.reload();
       } else {
-        const data = await r.json().catch(() => ({}));
-        alert(data?.error?.message ?? `Ошибка ${r.status}`);
+        const body = await r.json().catch(() => ({}));
+        alert(body?.error?.message ?? `Ошибка ${r.status}`);
       }
     } finally {
       retrying = null;

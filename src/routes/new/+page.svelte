@@ -236,7 +236,6 @@
     color: var(--c-text);
   }
   input[type='text'],
-  input[type='email'],
   input[type='datetime-local'],
   textarea {
     font-family: inherit;
