@@ -5,25 +5,48 @@
   let password = $state('');
   let submitting = $state(false);
   let errorMessage = $state<string | null>(null);
+  let needsVerification = $state(false);
+  let resending = $state(false);
+  let resendDone = $state(false);
 
   async function submit() {
     submitting = true;
     errorMessage = null;
+    needsVerification = false;
+    resendDone = false;
     try {
       const r = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ email, password })
       });
-      const data = await r.json();
+      const body = await r.json();
       if (!r.ok) {
-        errorMessage = data.error?.message ?? 'Ошибка входа';
+        if (r.status === 403 && body.error?.code === 'email_not_verified') {
+          needsVerification = true;
+          return;
+        }
+        errorMessage = body.error?.message ?? 'Ошибка входа';
         return;
       }
       await invalidateAll();
       await goto('/my');
     } finally {
       submitting = false;
+    }
+  }
+
+  async function resend() {
+    resending = true;
+    try {
+      await fetch('/api/auth/resend-verification', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      resendDone = true;
+    } finally {
+      resending = false;
     }
   }
 </script>
@@ -43,6 +66,20 @@
     </label>
     {#if errorMessage}
       <div class="error">{errorMessage}</div>
+    {/if}
+    {#if needsVerification}
+      <div class="warn">
+        Email не подтверждён. Откройте письмо со ссылкой или запросите новое.
+        <button type="button" class="link" onclick={resend} disabled={resending || resendDone}>
+          {#if resendDone}
+            Письмо отправлено
+          {:else if resending}
+            Отправляем…
+          {:else}
+            Переотправить письмо
+          {/if}
+        </button>
+      </div>
     {/if}
     <button type="submit" class="primary" disabled={submitting}>
       {submitting ? 'Входим…' : 'Войти'}
@@ -89,6 +126,27 @@
     border-radius: var(--radius);
     border: 1px solid #fecaca;
     font-size: 0.9rem;
+  }
+  .warn {
+    background: #fffbeb;
+    color: #92400e;
+    padding: var(--space-3);
+    border-radius: var(--radius);
+    border: 1px solid #fde68a;
+    font-size: 0.9rem;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  button.link {
+    background: transparent;
+    color: var(--c-navy);
+    border: 0;
+    padding: 0;
+    text-align: left;
+    font: inherit;
+    cursor: pointer;
+    text-decoration: underline;
   }
   .muted { color: var(--c-muted); margin-top: var(--space-4); text-align: center; }
 

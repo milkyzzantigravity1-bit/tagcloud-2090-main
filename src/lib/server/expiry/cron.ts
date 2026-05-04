@@ -3,6 +3,7 @@ import { db } from '../db';
 import { surveys, type Survey } from '../schema';
 import { processExpired } from './process';
 import { purgeExpiredSessions } from '../auth/sessions';
+import { purgeExpiredVerificationTokens } from '../auth/verification';
 
 const TICK_MS = 60_000;
 const BATCH = 20;
@@ -68,6 +69,12 @@ async function scan(): Promise<void> {
         if (removed > 0) console.log(`[cron] purged ${removed} expired sessions`);
       } catch (err) {
         console.error('[cron] session purge failed:', err instanceof Error ? err.message : err);
+      }
+      try {
+        const removed = await purgeExpiredVerificationTokens();
+        if (removed > 0) console.log(`[cron] purged ${removed} expired verification tokens`);
+      } catch (err) {
+        console.error('[cron] token purge failed:', err instanceof Error ? err.message : err);
       }
     }
   } catch (err) {

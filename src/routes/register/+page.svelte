@@ -1,11 +1,10 @@
 <script lang="ts">
-  import { goto, invalidateAll } from '$app/navigation';
-
   let email = $state('');
   let password = $state('');
   let submitting = $state(false);
   let errorMessage = $state<string | null>(null);
-  let claimedExisting = $state(false);
+  let pending = $state<{ email: string; ttlHours: number; status: string } | null>(null);
+  let resending = $state(false);
 
   async function submit() {
     submitting = true;
@@ -16,17 +15,31 @@
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ email, password })
       });
-      const data = await r.json();
+      const body = await r.json();
       if (!r.ok) {
-        const issue = data.error?.issues?.[0];
-        errorMessage = issue ? `${issue.path?.join('.') ?? ''}: ${issue.message}` : data.error?.message ?? 'Ошибка';
+        const issue = body.error?.issues?.[0];
+        errorMessage = issue
+          ? `${issue.path?.join('.') ?? ''}: ${issue.message}`
+          : body.error?.message ?? 'Ошибка';
         return;
       }
-      claimedExisting = !!data.claimedExisting;
-      await invalidateAll();
-      await goto('/my');
+      pending = { email: body.email, ttlHours: body.ttlHours, status: body.status };
     } finally {
       submitting = false;
+    }
+  }
+
+  async function resend() {
+    if (!pending) return;
+    resending = true;
+    try {
+      await fetch('/api/auth/resend-verification', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ email: pending.email })
+      });
+    } finally {
+      resending = false;
     }
   }
 </script>
@@ -34,25 +47,38 @@
 <svelte:head><title>Регистрация — Облако тегов 2090</title></svelte:head>
 
 <div class="auth">
-  <h1>Регистрация</h1>
-  <p class="muted">После регистрации в разделе «Мои опросы» появятся все опросы, ранее созданные с этим email.</p>
-  <form onsubmit={(e) => { e.preventDefault(); submit(); }}>
-    <label>
-      <span>Email</span>
-      <input type="email" bind:value={email} required autocomplete="email" maxlength="254" />
-    </label>
-    <label>
-      <span>Пароль (минимум 8 символов)</span>
-      <input type="password" bind:value={password} required autocomplete="new-password" minlength="8" maxlength="72" />
-    </label>
-    {#if errorMessage}
-      <div class="error">{errorMessage}</div>
+  {#if pending}
+    <h1>Письмо отправлено</h1>
+    <p>Мы отправили ссылку для подтверждения на <strong>{pending.email}</strong>. Откройте письмо и нажмите кнопку, чтобы войти.</p>
+    <p class="muted">Срок действия ссылки — {pending.ttlHours} ч. Если письмо не пришло, проверьте папку «Спам» или нажмите кнопку ниже.</p>
+    {#if pending.status === 'claim_pending'}
+      <p class="muted">После подтверждения email в разделе «Мои опросы» появятся опросы, ранее созданные с этим адресом.</p>
     {/if}
-    <button type="submit" class="primary" disabled={submitting}>
-      {submitting ? 'Создаём…' : 'Создать аккаунт'}
+    <button type="button" class="primary" onclick={resend} disabled={resending}>
+      {resending ? 'Отправляем…' : 'Отправить письмо ещё раз'}
     </button>
-  </form>
-  <p class="muted">Уже есть аккаунт? <a href="/login">Войти</a></p>
+    <p class="muted"><a href="/login">Назад ко входу</a></p>
+  {:else}
+    <h1>Регистрация</h1>
+    <p class="muted">После регистрации мы пришлём письмо со ссылкой для подтверждения email.</p>
+    <form onsubmit={(e) => { e.preventDefault(); submit(); }}>
+      <label>
+        <span>Email</span>
+        <input type="email" bind:value={email} required autocomplete="email" maxlength="254" />
+      </label>
+      <label>
+        <span>Пароль (минимум 8 символов)</span>
+        <input type="password" bind:value={password} required autocomplete="new-password" minlength="8" maxlength="72" />
+      </label>
+      {#if errorMessage}
+        <div class="error">{errorMessage}</div>
+      {/if}
+      <button type="submit" class="primary" disabled={submitting}>
+        {submitting ? 'Создаём…' : 'Создать аккаунт'}
+      </button>
+    </form>
+    <p class="muted">Уже есть аккаунт? <a href="/login">Войти</a></p>
+  {/if}
 </div>
 
 <style>
@@ -85,6 +111,7 @@
     font-weight: 500;
     font-family: inherit;
     font-size: 1rem;
+    margin-top: var(--space-4);
   }
   button:disabled { opacity: 0.5; }
   .error {

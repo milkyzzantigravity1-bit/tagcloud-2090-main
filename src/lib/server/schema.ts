@@ -20,8 +20,24 @@ export const users = pgTable('users', {
   id: uuid('id').defaultRandom().primaryKey(),
   email: text('email').notNull().unique(),
   passwordHash: text('password_hash'),
+  emailVerified: boolean('email_verified').notNull().default(false),
+  emailVerifiedAt: timestamp('email_verified_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
 });
+
+export const emailVerificationTokens = pgTable('email_verification_tokens', {
+  token: uuid('token').defaultRandom().primaryKey(),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  email: text('email').notNull(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  usedAt: timestamp('used_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+}, (t) => ({
+  userIdx: index('evt_user_idx').on(t.userId),
+  expiresIdx: index('evt_expires_idx').on(t.expiresAt)
+}));
 
 export const sessions = pgTable('sessions', {
   id: text('id').primaryKey(),
