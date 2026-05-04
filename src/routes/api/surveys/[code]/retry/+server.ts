@@ -13,7 +13,10 @@ export const POST: RequestHandler = async ({ params, url, locals }) => {
     token: url.searchParams.get('t')
   });
   if (!access.ok) {
-    return json({ error: { code: access.code, message: access.message } }, { status: access.status });
+    return json(
+      { error: { code: access.code, message: access.message } },
+      { status: access.status }
+    );
   }
   const survey = access.survey;
 

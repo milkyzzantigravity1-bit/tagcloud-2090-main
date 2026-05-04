@@ -55,14 +55,26 @@
 
 <div class="auth">
   <h1>Вход</h1>
-  <form onsubmit={(e) => { e.preventDefault(); submit(); }}>
+  <form
+    onsubmit={(e) => {
+      e.preventDefault();
+      submit();
+    }}
+  >
     <label>
       <span>Email</span>
       <input type="email" bind:value={email} required autocomplete="email" maxlength="254" />
     </label>
     <label>
       <span>Пароль</span>
-      <input type="password" bind:value={password} required autocomplete="current-password" minlength="8" maxlength="72" />
+      <input
+        type="password"
+        bind:value={password}
+        required
+        autocomplete="current-password"
+        minlength="8"
+        maxlength="72"
+      />
     </label>
     {#if errorMessage}
       <div class="error">{errorMessage}</div>
@@ -89,8 +101,13 @@
 </div>
 
 <style>
-  .auth { max-width: 400px; margin: 0 auto; }
-  h1 { margin-bottom: var(--space-6); }
+  .auth {
+    max-width: 400px;
+    margin: 0 auto;
+  }
+  h1 {
+    margin-bottom: var(--space-6);
+  }
   form {
     display: flex;
     flex-direction: column;
@@ -99,8 +116,14 @@
     padding: var(--space-6);
     border-radius: var(--radius-lg);
   }
-  label { display: flex; flex-direction: column; gap: var(--space-2); }
-  label > span { font-weight: 500; }
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  label > span {
+    font-weight: 500;
+  }
   input {
     padding: var(--space-3);
     border: 1px solid var(--c-border);
@@ -118,7 +141,9 @@
     font-family: inherit;
     font-size: 1rem;
   }
-  button:disabled { opacity: 0.5; }
+  button:disabled {
+    opacity: 0.5;
+  }
   .error {
     background: #fef2f2;
     color: var(--c-danger);
@@ -148,12 +173,25 @@
     cursor: pointer;
     text-decoration: underline;
   }
-  .muted { color: var(--c-muted); margin-top: var(--space-4); text-align: center; }
+  .muted {
+    color: var(--c-muted);
+    margin-top: var(--space-4);
+    text-align: center;
+  }
 
   @media (max-width: 480px) {
-    .auth { max-width: 100%; }
-    form { padding: var(--space-4); }
-    button.primary { width: 100%; padding: var(--space-4); }
-    input { font-size: 16px; }
+    .auth {
+      max-width: 100%;
+    }
+    form {
+      padding: var(--space-4);
+    }
+    button.primary {
+      width: 100%;
+      padding: var(--space-4);
+    }
+    input {
+      font-size: 16px;
+    }
   }
 </style>

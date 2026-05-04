@@ -82,12 +82,16 @@
       const body = await r.json().catch(() => null);
 
       if (r.ok) {
-        try { localStorage.setItem(VOTED_KEY, '1'); } catch {}
+        try {
+          localStorage.setItem(VOTED_KEY, '1');
+        } catch {}
         screen = 'sent';
         return;
       }
       if (r.status === 409) {
-        try { localStorage.setItem(VOTED_KEY, '1'); } catch {}
+        try {
+          localStorage.setItem(VOTED_KEY, '1');
+        } catch {}
         screen = 'already';
         return;
       }
@@ -196,8 +200,12 @@
 {/if}
 
 <style>
-  h1 { margin-bottom: var(--space-2); }
-  .muted { color: var(--c-muted); }
+  h1 {
+    margin-bottom: var(--space-2);
+  }
+  .muted {
+    color: var(--c-muted);
+  }
   .centered {
     text-align: center;
     padding: var(--space-12) 0;
@@ -254,7 +262,9 @@
   }
   /* iOS не зумит инпут с font-size >= 16px */
   @supports (-webkit-touch-callout: none) {
-    input[type='text'] { font-size: 16px; }
+    input[type='text'] {
+      font-size: 16px;
+    }
   }
   .hint {
     color: var(--c-muted);
@@ -305,15 +315,27 @@
   }
 
   @media (max-width: 480px) {
-    form { gap: var(--space-4); }
-    .question { padding: var(--space-3); }
-    legend { font-size: 1rem; }
-    button.primary { width: 100%; padding: var(--space-4); font-size: 1.0625rem; }
+    form {
+      gap: var(--space-4);
+    }
+    .question {
+      padding: var(--space-3);
+    }
+    legend {
+      font-size: 1rem;
+    }
+    button.primary {
+      width: 100%;
+      padding: var(--space-4);
+      font-size: 1.0625rem;
+    }
     button.mini {
       min-width: 44px;
       min-height: 44px;
       padding: 0;
     }
-    .row { gap: var(--space-2); }
+    .row {
+      gap: var(--space-2);
+    }
   }
 </style>

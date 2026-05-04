@@ -19,7 +19,9 @@ export async function createSession(userId: string): Promise<{ id: string; expir
   return { id, expiresAt };
 }
 
-export async function getSessionUser(sessionId: string | undefined | null): Promise<AuthUser | null> {
+export async function getSessionUser(
+  sessionId: string | undefined | null
+): Promise<AuthUser | null> {
   if (!sessionId) return null;
   const rows = await db
     .select({ id: users.id, email: users.email, expiresAt: sessions.expiresAt })

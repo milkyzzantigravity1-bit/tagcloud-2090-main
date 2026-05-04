@@ -1,16 +1,17 @@
 :root {
-  --c-navy: #0E2A5C;
-  --c-blue: #2D9FDA;
-  --c-gold: #E0B73A;
-  --c-bg: #FFFFFF;
-  --c-surface: #F7F8FA;
-  --c-text: #1A1A1A;
-  --c-muted: #6B7280;
-  --c-border: #E5E7EB;
-  --c-danger: #DC2626;
+  --c-navy: #0e2a5c;
+  --c-blue: #2d9fda;
+  --c-gold: #e0b73a;
+  --c-bg: #ffffff;
+  --c-surface: #f7f8fa;
+  --c-text: #1a1a1a;
+  --c-muted: #6b7280;
+  --c-border: #e5e7eb;
+  --c-danger: #dc2626;
 
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-    'Helvetica Neue', Arial, sans-serif;
+  --font-sans:
+    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    sans-serif;
 
   --radius: 8px;
   --radius-lg: 12px;
@@ -26,11 +27,14 @@
   --shadow: 0 4px 12px rgba(14, 42, 92, 0.08);
 }
 
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
-html, body {
+html,
+body {
   margin: 0;
   padding: 0;
   background: var(--c-bg);
@@ -50,7 +54,9 @@ a:hover {
   text-decoration: underline;
 }
 
-h1, h2, h3 {
+h1,
+h2,
+h3 {
   margin: 0 0 var(--space-4);
   color: var(--c-navy);
   font-weight: 600;
@@ -73,6 +79,11 @@ code {
 
 /* mobile breakpoints (используются в +layout.svelte и page-стилях) */
 @media (max-width: 480px) {
-  html, body { font-size: 15px; }
-  h1 { font-size: 1.5rem; }
+  html,
+  body {
+    font-size: 15px;
+  }
+  h1 {
+    font-size: 1.5rem;
+  }
 }

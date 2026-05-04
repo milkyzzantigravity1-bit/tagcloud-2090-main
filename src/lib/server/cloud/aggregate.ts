@@ -48,8 +48,9 @@ export async function aggregateQuestion(
 
   // postgres-js возвращает rows напрямую, drizzle-orm execute оборачивает.
   // Учитываем оба варианта.
-  const list = (rows as unknown as { rows?: Array<{ word: string; total: number }> }).rows
-    ?? (rows as unknown as Array<{ word: string; total: number }>);
+  const list =
+    (rows as unknown as { rows?: Array<{ word: string; total: number }> }).rows ??
+    (rows as unknown as Array<{ word: string; total: number }>);
 
   return list.map((r) => [r.word, Number(r.total)] as CloudWord);
 }

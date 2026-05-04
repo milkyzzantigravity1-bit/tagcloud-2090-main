@@ -79,7 +79,10 @@ export async function processExpired(survey: Survey): Promise<void> {
     notifyClosed(survey.code, 'sent');
     log.info('expiry_sent', { surveyCode: survey.code });
   } catch (err) {
-    log.error('expiry_failed', { surveyCode: survey.code, err: err instanceof Error ? err.message : String(err) });
+    log.error('expiry_failed', {
+      surveyCode: survey.code,
+      err: err instanceof Error ? err.message : String(err)
+    });
     await db.update(surveys).set({ status: 'failed' }).where(eq(surveys.id, survey.id));
     // Чистим ключи и в failed-ветке: повторная отправка через /retry заново
     // подберёт голоса из Postgres (SELECT word, wordNorm), агрегаты в Redis

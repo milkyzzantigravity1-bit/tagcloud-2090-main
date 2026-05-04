@@ -69,13 +69,17 @@ async function scan(): Promise<void> {
         const removed = await purgeExpiredSessions();
         if (removed > 0) log.info('cron_purged_sessions', { removed });
       } catch (err) {
-        log.error('cron_session_purge_failed', { err: err instanceof Error ? err.message : String(err) });
+        log.error('cron_session_purge_failed', {
+          err: err instanceof Error ? err.message : String(err)
+        });
       }
       try {
         const removed = await purgeExpiredVerificationTokens();
         if (removed > 0) log.info('cron_purged_verification_tokens', { removed });
       } catch (err) {
-        log.error('cron_token_purge_failed', { err: err instanceof Error ? err.message : String(err) });
+        log.error('cron_token_purge_failed', {
+          err: err instanceof Error ? err.message : String(err)
+        });
       }
     }
   } catch (err) {

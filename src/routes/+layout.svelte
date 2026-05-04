@@ -98,7 +98,9 @@
     text-decoration: none;
     white-space: nowrap;
   }
-  .nav-link:hover { text-decoration: underline; }
+  .nav-link:hover {
+    text-decoration: underline;
+  }
   .nav-cta {
     background: var(--c-navy);
     color: white;
@@ -108,7 +110,9 @@
     font-weight: 500;
     white-space: nowrap;
   }
-  .nav-cta:hover { text-decoration: none; }
+  .nav-cta:hover {
+    text-decoration: none;
+  }
   .user-email {
     color: var(--c-muted);
     font-size: 0.875rem;
@@ -165,7 +169,9 @@
       padding: var(--space-3) var(--space-4);
       flex-wrap: wrap;
     }
-    .burger { display: inline-flex; }
+    .burger {
+      display: inline-flex;
+    }
     .auth-nav {
       display: none;
       width: 100%;
@@ -176,8 +182,11 @@
       border-top: 1px solid var(--c-border);
       margin-top: var(--space-3);
     }
-    .auth-nav.open { display: flex; }
-    .nav-link, .nav-cta {
+    .auth-nav.open {
+      display: flex;
+    }
+    .nav-link,
+    .nav-cta {
       text-align: center;
       padding: var(--space-3);
     }

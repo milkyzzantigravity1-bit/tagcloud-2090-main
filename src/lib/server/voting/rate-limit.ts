@@ -66,10 +66,7 @@ export async function markVoted(ip: string, code: string, expiresAt: Date): Prom
  * Email нормализуется (`trim().toLowerCase()`) и хэшируется тем же
  * salted-sha256, чтобы Redis не хранил адреса в открытом виде.
  */
-export async function checkAuthRateLimit(
-  ip: string,
-  email: string
-): Promise<RateLimitResult> {
+export async function checkAuthRateLimit(ip: string, email: string): Promise<RateLimitResult> {
   const ipKey = `auth_rl:ip:${await ipHash(ip)}`;
   const emailKey = `auth_rl:email:${await emailHash(email)}`;
 
@@ -91,7 +88,5 @@ export async function checkAuthRateLimit(
 
 async function emailHash(email: string): Promise<string> {
   const salt = await getOrCreateSalt();
-  return createHash('sha256')
-    .update(`email:${email.trim().toLowerCase()}:${salt}`)
-    .digest('hex');
+  return createHash('sha256').update(`email:${email.trim().toLowerCase()}:${salt}`).digest('hex');
 }

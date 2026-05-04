@@ -36,11 +36,7 @@ export type LoginResult =
 export async function register(creds: Credentials): Promise<RegisterResult> {
   const passwordHash = await hashPassword(creds.password);
 
-  const [existing] = await db
-    .select()
-    .from(users)
-    .where(eq(users.email, creds.email))
-    .limit(1);
+  const [existing] = await db.select().from(users).where(eq(users.email, creds.email)).limit(1);
 
   let userId: string;
   let status: 'new_pending' | 'claim_pending' | 'reverify_pending';
