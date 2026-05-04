@@ -22,6 +22,12 @@ export const POST: RequestHandler = async ({ request, cookies, getClientAddress 
 
   const result = await login(parsed.data);
   if (!result.ok) {
+    if (result.code === 'email_not_verified') {
+      return json(
+        { error: { code: result.code, message: result.message, email: result.email } },
+        { status: 403 }
+      );
+    }
     return json({ error: { code: result.code, message: result.message } }, { status: 401 });
   }
 
