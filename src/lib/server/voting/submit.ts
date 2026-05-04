@@ -1,6 +1,8 @@
 import { db } from '../db';
 import { responses } from '../schema';
 import { redis } from '../redis';
+import { log } from '../log';
+import { incVotesAccepted, incVotesFlushed, setVotesPending } from '../metrics';
 import type { ProcessedAnswer } from './validate';
 
 type QueueItem = {
@@ -42,12 +44,15 @@ async function flush(): Promise<void> {
       }
     }
     await pipeline.exec();
+    incVotesFlushed(batch.length, 'ok');
   } catch (err) {
     // Возвращаем неотданный пакет в начало буфера, чтобы повторить попытку
     // на следующем тике — иначе голоса терялись бы при первой ошибке БД/Redis.
     buffer.unshift(...batch);
-    console.error('[voting/submit] flush failed, requeued batch', err);
+    incVotesFlushed(batch.length, 'failed');
+    log.error('voting_flush_failed', { batchSize: batch.length, err: String(err) });
   } finally {
+    setVotesPending(buffer.length);
     flushing = false;
   }
 }
@@ -62,6 +67,7 @@ function scheduleFlush(): void {
 }
 
 export async function submitAnswers(processed: ProcessedAnswer[]): Promise<void> {
+  let added = 0;
   for (const answer of processed) {
     for (let i = 0; i < answer.words.length; i++) {
       buffer.push({
@@ -69,7 +75,12 @@ export async function submitAnswers(processed: ProcessedAnswer[]): Promise<void>
         word: answer.words[i],
         wordNorm: answer.normalized[i]
       });
+      added++;
     }
+  }
+  if (added > 0) {
+    incVotesAccepted(added);
+    setVotesPending(buffer.length);
   }
   if (buffer.length >= FLUSH_THRESHOLD) {
     await flush();

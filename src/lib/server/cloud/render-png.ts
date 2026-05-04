@@ -1,26 +1,45 @@
-import { createCanvas } from 'canvas';
-import cloud, { type Word } from 'd3-cloud';
-import { colorPicker, weightFactor } from '$lib/cloud';
+import path from 'node:path';
+import os from 'node:os';
+import { Piscina } from 'piscina';
+import { observeRenderDuration } from '../metrics';
+import { log } from '../log';
 import type { CloudWord, ColorScheme } from '$lib/types/cloud';
-
-type CloudInput = Word & { text: string; size: number };
 
 export type RenderSize = { width: number; height: number };
 
 const DEFAULT_SIZE: RenderSize = { width: 1200, height: 800 };
-const FONT = 'sans-serif';
 
-function drawEmpty(width: number, height: number, message: string): Buffer {
-  const canvas = createCanvas(width, height);
-  const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#FFFFFF';
-  ctx.fillRect(0, 0, width, height);
-  ctx.fillStyle = '#6B7280';
-  ctx.font = `28px ${FONT}`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(message, width / 2, height / 2);
-  return canvas.toBuffer('image/png');
+/**
+ * Pool worker'ов для рендера PNG. d3-cloud + canvas — синхронные и
+ * CPU-heavy (100–300мс на 100 слов); в main-thread это блокирует event loop
+ * для всех остальных запросов. Worker_threads исполняют рендер параллельно
+ * в отдельных V8-изолятах.
+ *
+ * Workers ленивые: создаются по первому запросу, лимит сверху
+ * `min(cpus-1, 4)`. На домашнем сервере с 4 vCPU это 3 worker'а — баланс
+ * между параллелизмом и памятью (canvas-инстансы тяжёлые).
+ *
+ * Файл воркера лежит вне src/ — `workers/render-worker.mjs` в корне репо,
+ * чтобы Vite его не бандлил и путь резолвился одинаково в dev/prod через
+ * `process.cwd()`.
+ */
+const g = globalThis as unknown as { __tagcloud_render_pool?: Piscina };
+
+function getPool(): Piscina {
+  if (g.__tagcloud_render_pool) return g.__tagcloud_render_pool;
+  const filename = path.resolve(process.cwd(), 'workers/render-worker.mjs');
+  const maxThreads = Math.min(4, Math.max(1, os.cpus().length - 1));
+  const pool = new Piscina({
+    filename,
+    minThreads: 0,
+    maxThreads,
+    // Если воркер падает (canvas, d3-cloud) — не убивает приложение.
+    // idleTimeout: воркер выключается через 30с простоя, освобождая RAM.
+    idleTimeout: 30_000
+  });
+  g.__tagcloud_render_pool = pool;
+  log.info('render_pool_initialized', { filename, maxThreads });
+  return pool;
 }
 
 export async function renderPng(
@@ -29,48 +48,16 @@ export async function renderPng(
   palette: string[] | null,
   size: RenderSize = DEFAULT_SIZE
 ): Promise<Buffer> {
-  if (words.length === 0) return drawEmpty(size.width, size.height, 'Нет ответов');
-
-  const wf = weightFactor(words, 28);
-  const color = colorPicker(scheme, palette);
-
-  const canvas = createCanvas(size.width, size.height);
-  const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#FFFFFF';
-  ctx.fillRect(0, 0, size.width, size.height);
-
-  await new Promise<void>((resolve, reject) => {
-    const layout = cloud<CloudInput>()
-      .size([size.width, size.height])
-      .canvas(() => createCanvas(1, 1) as unknown as HTMLCanvasElement)
-      .words(words.map(([text, count]) => ({ text, size: wf(count) })))
-      .padding(4)
-      .rotate(() => 0)
-      .font(FONT)
-      .fontSize((d) => d.size as number)
-      .on('end', (placed: CloudInput[]) => {
-        ctx.save();
-        ctx.translate(size.width / 2, size.height / 2);
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        for (const w of placed) {
-          ctx.font = `${w.size}px ${FONT}`;
-          ctx.fillStyle = color();
-          ctx.save();
-          ctx.translate(w.x ?? 0, w.y ?? 0);
-          ctx.rotate(((w.rotate ?? 0) * Math.PI) / 180);
-          ctx.fillText(w.text ?? '', 0, 0);
-          ctx.restore();
-        }
-        ctx.restore();
-        resolve();
-      });
-    try {
-      layout.start();
-    } catch (e) {
-      reject(e);
-    }
+  const start = performance.now();
+  const result = await getPool().run({
+    words,
+    scheme,
+    palette,
+    width: size.width,
+    height: size.height
   });
-
-  return canvas.toBuffer('image/png');
+  observeRenderDuration((performance.now() - start) / 1000);
+  // piscina возвращает Buffer как есть — он передаётся через
+  // structuredClone (transferable не используем, лишняя возня).
+  return result as Buffer;
 }

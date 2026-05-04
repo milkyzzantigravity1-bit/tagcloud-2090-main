@@ -1,5 +1,6 @@
 import { createTransport, type Transporter } from 'nodemailer';
 import { env } from '$env/dynamic/private';
+import { log } from '../log';
 
 let _transporter: Transporter | null = null;
 
@@ -25,7 +26,7 @@ export async function verifySmtp(): Promise<boolean> {
     await t.verify();
     return true;
   } catch (err) {
-    console.error('[smtp] verify failed:', err instanceof Error ? err.message : err);
+    log.error('smtp_verify_failed', { err: err instanceof Error ? err.message : String(err) });
     return false;
   }
 }

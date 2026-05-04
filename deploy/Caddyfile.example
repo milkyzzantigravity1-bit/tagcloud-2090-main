@@ -29,6 +29,18 @@ yourdomain.tld {
 	# file_server
 
 	# Главное: проксируем всё на Node. Caddy сам апгрейдит ws:// → wss://.
+	#
+	# Для multi-instance (см. deploy/README.md "Профиль multi-instance"):
+	# заменить `127.0.0.1:3000` на список upstream'ов и добавить `lb_policy`.
+	# Пример для 4 инстансов:
+	#   reverse_proxy 127.0.0.1:3001 127.0.0.1:3002 127.0.0.1:3003 127.0.0.1:3004 {
+	#       lb_policy ip_hash         # WS sticky: один IP всегда на один upstream
+	#       health_uri /readyz
+	#       health_interval 5s
+	#       health_timeout 2s
+	#       fail_duration 30s
+	#       …заголовки и transport ниже…
+	#   }
 	reverse_proxy 127.0.0.1:3000 {
 		# WebSocket-апгрейд работает из коробки; явно указываем заголовки,
 		# чтобы getClientAddress() в SvelteKit видел реальный IP клиента.
@@ -42,6 +54,22 @@ yourdomain.tld {
 			write_timeout 1h
 		}
 	}
+
+	# /metrics — только из локалки/мониторинга. Если METRICS_TOKEN задан в
+	# tagcloud.env, бэкенд проверит его сам; этот ACL — второй слой защиты.
+	@metrics path /metrics
+	@metrics_internal {
+		path /metrics
+		remote_ip 127.0.0.1 ::1 10.0.0.0/8 192.168.0.0/16 172.16.0.0/12
+	}
+	handle @metrics {
+		# По умолчанию — наружу не пускаем. Раскомментируйте `respond 403` ниже
+		# и `handle @metrics_internal` отдельно, если хотите явный allow-list.
+		respond 403
+	}
+	# handle @metrics_internal {
+	# 	reverse_proxy 127.0.0.1:3000
+	# }
 
 	# Security-заголовки. Дополняют SvelteKit-CSP (она ставится в HTML-ответе),
 	# здесь лежат HTTP-only заголовки, которые проще централизовать на edge.
