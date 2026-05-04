@@ -11,6 +11,13 @@ type QueueItem = {
 
 const FLUSH_INTERVAL_MS = 200;
 const FLUSH_THRESHOLD = 100;
+// Fallback-TTL для агрегатов в Redis (`cloud:${questionId}`).
+// Первичная очистка — в `expiry/process.ts` после отправки email; этот TTL
+// нужен только чтобы данные не висели вечно, если процесс завершения не дошёл
+// до DEL (упал, был убит, опрос «застрял» в expired). 7 дней покрывает любой
+// разумный срок жизни опроса (UI ограничивает создание `expires_at` ближайшим
+// будущим, и cron форсит закрытие через ~5 мин после истечения).
+const CLOUD_KEY_TTL_SEC = 7 * 24 * 60 * 60;
 
 const buffer: QueueItem[] = [];
 let timer: NodeJS.Timeout | null = null;
@@ -23,8 +30,16 @@ async function flush(): Promise<void> {
   try {
     await db.insert(responses).values(batch);
     const pipeline = redis.pipeline();
+    // Дедуплицируем questionId, чтобы EXPIRE вызывался один раз на ключ за
+    // батч — это всё равно «sliding» TTL: каждый flush обновляет срок жизни.
+    const seenKeys = new Set<string>();
     for (const item of batch) {
-      pipeline.zincrby(`cloud:${item.questionId}`, 1, item.wordNorm);
+      const key = `cloud:${item.questionId}`;
+      pipeline.zincrby(key, 1, item.wordNorm);
+      if (!seenKeys.has(key)) {
+        seenKeys.add(key);
+        pipeline.expire(key, CLOUD_KEY_TTL_SEC);
+      }
     }
     await pipeline.exec();
   } catch (err) {
