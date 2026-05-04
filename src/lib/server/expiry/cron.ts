@@ -32,7 +32,7 @@ async function claimBatch(now: Date, stuckThreshold: Date): Promise<Survey[]> {
   // Date как timestamp без подсказки, передаём ISO-строку.
   const nowIso = now.toISOString();
   const stuckIso = stuckThreshold.toISOString();
-  const result = await db.execute(sql`
+  const rows = await db.execute<Survey>(sql`
     UPDATE ${surveys}
     SET status = 'expired'
     WHERE id IN (
@@ -45,7 +45,7 @@ async function claimBatch(now: Date, stuckThreshold: Date): Promise<Survey[]> {
     )
     RETURNING *
   `);
-  return (result as unknown as { rows?: Survey[] }).rows ?? (result as unknown as Survey[]);
+  return Array.from(rows);
 }
 
 async function scan(): Promise<void> {

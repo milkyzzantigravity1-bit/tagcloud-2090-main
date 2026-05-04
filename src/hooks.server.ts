@@ -1,4 +1,4 @@
-import type { Handle } from '@sveltejs/kit';
+import type { Handle, HandleServerError } from '@sveltejs/kit';
 import { startExpiryCron } from '$lib/server/expiry/cron';
 import { COOKIE_NAME, getSessionUser } from '$lib/server/auth/sessions';
 import { flushPending, pendingCount } from '$lib/server/voting/submit';
@@ -58,4 +58,29 @@ export const handle: Handle = async ({ event, resolve }) => {
       return response;
     }
   );
+};
+
+/**
+ * Глобальный обработчик ошибок: SvelteKit зовёт его при любом необработанном
+ * исключении в load/+server-руте. Мы:
+ *  - логируем стек со структурой через наш JSON-логгер (контекст requestId
+ *    уже взят из AsyncLocalStorage, см. handle выше);
+ *  - выдаём клиенту безопасное сообщение + errorId, чтобы пользователь
+ *    мог процитировать его в баг-репорте, а мы — найти запись в логах.
+ */
+export const handleError: HandleServerError = ({ error, event, status, message }) => {
+  const errorId = genRequestId();
+  log.error('unhandled_exception', {
+    errorId,
+    status,
+    message,
+    method: event.request.method,
+    route: event.route.id ?? event.url.pathname,
+    err: error instanceof Error ? error.message : String(error),
+    stack: error instanceof Error ? error.stack : undefined
+  });
+  return {
+    message: 'Внутренняя ошибка сервера',
+    errorId
+  };
 };
