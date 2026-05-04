@@ -35,6 +35,10 @@ export async function deleteSession(sessionId: string): Promise<void> {
   await db.delete(sessions).where(eq(sessions.id, sessionId));
 }
 
-export async function purgeExpiredSessions(): Promise<void> {
-  await db.delete(sessions).where(lt(sessions.expiresAt, new Date()));
+export async function purgeExpiredSessions(): Promise<number> {
+  const deleted = await db
+    .delete(sessions)
+    .where(lt(sessions.expiresAt, new Date()))
+    .returning({ id: sessions.id });
+  return deleted.length;
 }

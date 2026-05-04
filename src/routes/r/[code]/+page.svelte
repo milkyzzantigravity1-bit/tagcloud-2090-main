@@ -1,21 +1,25 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import type { PageProps } from './$types';
 
   let { data }: PageProps = $props();
 
   type ScreenState = 'form' | 'sending' | 'sent' | 'already' | 'closed';
-  let screen = $state<ScreenState>(data.expired ? 'closed' : 'form');
+  // Initial-only чтения через untrack: страница SSR-рендерится с фиксированным
+  // data из server load, реактивность нам тут не нужна и Svelte 5 справедливо
+  // предупредит без untrack.
+  const survey = untrack(() => data.survey);
+  const initialExpired = untrack(() => data.expired);
+  let screen = $state<ScreenState>(initialExpired ? 'closed' : 'form');
 
   // ответы: questionId -> string[]
   let answers = $state<Record<string, string[]>>(
-    Object.fromEntries(data.survey.questions.map((q) => [q.id, ['']]))
+    Object.fromEntries(survey.questions.map((q) => [q.id, ['']]))
   );
 
   let errorMessage = $state<string | null>(null);
   let errorQuestionId = $state<string | null>(null);
 
-  const survey = data.survey;
   const VOTED_KEY = `voted:${survey.code}`;
 
   onMount(() => {
@@ -75,7 +79,7 @@
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      const data = await r.json().catch(() => null);
+      const body = await r.json().catch(() => null);
 
       if (r.ok) {
         try { localStorage.setItem(VOTED_KEY, '1'); } catch {}
@@ -91,8 +95,8 @@
         screen = 'closed';
         return;
       }
-      errorQuestionId = data?.error?.questionId ?? null;
-      errorMessage = data?.error?.message ?? `Ошибка ${r.status}`;
+      errorQuestionId = body?.error?.questionId ?? null;
+      errorMessage = body?.error?.message ?? `Ошибка ${r.status}`;
       screen = 'form';
     } catch (e) {
       errorMessage = (e as Error).message;

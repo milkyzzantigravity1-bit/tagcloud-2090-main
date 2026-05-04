@@ -53,6 +53,19 @@ export async function handleUpgrade(
     return;
   }
 
+  // Не открываем WS для уже завершённых опросов: клиенту сразу шлём
+  // 'closed' через короткоживущий апгрейд, чтобы UI обновил состояние.
+  if (survey.status !== 'active') {
+    wss.handleUpgrade(req, socket, head, (ws) => {
+      try {
+        ws.send(JSON.stringify({ type: 'closed', reason: survey.status }));
+      } finally {
+        ws.close(1000, survey.status);
+      }
+    });
+    return;
+  }
+
   const qs = await db
     .select({ id: questions.id })
     .from(questions)

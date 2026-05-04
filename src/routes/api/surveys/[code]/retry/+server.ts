@@ -2,33 +2,20 @@ import { json } from '@sveltejs/kit';
 import { and, eq, inArray } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { surveys } from '$lib/server/schema';
-import { isValidCode } from '$lib/server/surveys/codes';
 import { processExpired } from '$lib/server/expiry/process';
+import { requireCreatorAccess } from '$lib/server/auth/access';
 import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ params, url, locals }) => {
-  const code = params.code!;
-  if (!isValidCode(code)) {
-    return json({ error: { code: 'invalid_code', message: 'Некорректный код' } }, { status: 400 });
+  const access = await requireCreatorAccess({
+    code: params.code!,
+    userId: locals.user?.id,
+    token: url.searchParams.get('t')
+  });
+  if (!access.ok) {
+    return json({ error: { code: access.code, message: access.message } }, { status: access.status });
   }
-
-  const token = url.searchParams.get('t') ?? undefined;
-  const userId = locals.user?.id;
-  if (!userId && !token) {
-    return json({ error: { code: 'unauthorized', message: 'Нужен вход или токен' } }, { status: 401 });
-  }
-
-  const [survey] = await db.select().from(surveys).where(eq(surveys.code, code)).limit(1);
-  if (!survey) {
-    return json({ error: { code: 'survey_not_found', message: 'Опрос не найден' } }, { status: 404 });
-  }
-
-  const accessOk =
-    (userId !== undefined && survey.userId === userId) ||
-    (token !== undefined && survey.creatorToken === token);
-  if (!accessOk) {
-    return json({ error: { code: 'forbidden', message: 'Нет доступа' } }, { status: 403 });
-  }
+  const survey = access.survey;
 
   // Можно retry только если опрос завершён неудачно или застрял в обработке
   const [claimed] = await db

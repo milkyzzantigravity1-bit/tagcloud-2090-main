@@ -3,7 +3,8 @@ import { db } from '../db';
 import { questions } from '../schema';
 import { aggregateQuestion } from '../cloud/aggregate';
 
-const BOM = '﻿';
+// UTF-8 BOM — нужен Excel'ю для корректной кодировки кириллицы при открытии CSV.
+const BOM = '\uFEFF';
 
 function csvEscape(value: string): string {
   if (/[",\n\r]/.test(value)) return '"' + value.replace(/"/g, '""') + '"';
