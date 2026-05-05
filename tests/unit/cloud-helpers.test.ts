@@ -16,10 +16,10 @@ describe('colorPicker', () => {
     expect(pick()).toBe(pick());
   });
 
-  it('random выбирает из 3-цветной brand-палитры', () => {
+  it('random возвращает читаемый HEX-цвет (не из brand-палитры)', () => {
     const pick = colorPicker('random');
-    // С Math.random=0.5 получаем индекс 1 из массива из 3.
-    expect(pick()).toMatch(/^#[0-9A-Fa-f]{6,8}$/);
+    const c = pick();
+    expect(c).toMatch(/^#[0-9A-Fa-f]{6}$/);
   });
 
   it('custom использует переданную палитру', () => {

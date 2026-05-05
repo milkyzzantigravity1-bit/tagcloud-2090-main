@@ -15,18 +15,34 @@ import cloud from 'd3-cloud';
 
 const FONT = 'sans-serif';
 const BRAND_NAVY = '#0F172A';
-const BRAND_BLUE = '#3B82F6';
-const BRAND_GOLD = '#F59E0B';
-const BRAND_PALETTE = [BRAND_NAVY, BRAND_BLUE, BRAND_GOLD];
 
 // Дублируем helper'ы из src/lib/cloud.ts — воркер обязан быть автономным,
 // иначе придётся тащить всё дерево SvelteKit'овских импортов в worker thread.
 // Список достаточно стабилен (схемы цветов фиксированы), смены редки.
+function hslToHex(h, s, l) {
+  const sat = s / 100;
+  const lig = l / 100;
+  const k = (n) => (n + h / 30) % 12;
+  const a = sat * Math.min(lig, 1 - lig);
+  const f = (n) => {
+    const c = lig - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1));
+    return Math.round(255 * c)
+      .toString(16)
+      .padStart(2, '0');
+  };
+  return `#${f(0)}${f(8)}${f(4)}`;
+}
+
+function randomReadableColor() {
+  const h = Math.floor(Math.random() * 360);
+  const s = 65 + Math.floor(Math.random() * 20);
+  const l = 30 + Math.floor(Math.random() * 20);
+  return hslToHex(h, s, l);
+}
+
 function colorPicker(scheme, palette) {
   if (scheme === 'mono') return () => BRAND_NAVY;
-  if (scheme === 'random') {
-    return () => BRAND_PALETTE[Math.floor(Math.random() * BRAND_PALETTE.length)];
-  }
+  if (scheme === 'random') return randomReadableColor;
   if (scheme === 'custom' && palette && palette.length > 0) {
     return () => palette[Math.floor(Math.random() * palette.length)];
   }
