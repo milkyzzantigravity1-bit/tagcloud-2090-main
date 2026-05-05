@@ -173,7 +173,7 @@
     <fieldset>
       <legend>Цветовая схема</legend>
       <div class="segmented" role="radiogroup" aria-label="Цветовая схема">
-        {#each [['mono', 'Чёрно-белая'], ['random', 'Цвета бренда'], ['custom', 'Своя палитра']] as [v, label] (v)}
+        {#each [['mono', 'Чёрно-белая'], ['random', 'Случайные цвета'], ['custom', 'Своя палитра']] as [v, label] (v)}
           <button
             type="button"
             class="seg"
