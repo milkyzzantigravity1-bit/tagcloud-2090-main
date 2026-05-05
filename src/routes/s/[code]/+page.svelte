@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte';
+  import { onMount, onDestroy, untrack } from 'svelte';
   import type { PageProps } from './$types';
   import type { CloudWord, ServerMsg } from '$lib/types/cloud';
   import { buildWordCloudOptions } from '$lib/cloud';
@@ -9,23 +9,37 @@
   const respondentUrl = $derived(data.respondentUrl);
   const qrPngBase64Data = $derived(data.qrPngBase64Data);
   const creatorToken = $derived(data.creatorToken);
+  const isActive = $derived(survey.status === 'active');
 
   let canvas = $state<HTMLCanvasElement | null>(null);
-  let words = $state<Record<string, CloudWord[]>>({});
+  // Для уже завершённых опросов SSR отдаёт агрегат из Postgres (Redis-ключи
+  // почищены в processExpired). Иначе — стартуем с пустым облаком и ждём WS.
+  // untrack — только начальное значение из data, дальше реактивность не нужна.
+  let words = $state<Record<string, CloudWord[]>>(
+    untrack(() => ({ ...(data.initialWords ?? {}) }))
+  );
   let activeIdx = $state(0);
-  let wsState = $state<'connecting' | 'open' | 'closed'>('connecting');
+  // 'idle' — опрос завершён, WS не нужен; остальные — состояния live-канала.
+  let wsState = $state<'connecting' | 'open' | 'closed' | 'idle'>(
+    untrack(() => (isActive ? 'connecting' : 'idle'))
+  );
   let totalVotes = $derived(
     Object.values(words).reduce((s, w) => s + w.reduce((a, [, c]) => a + c, 0), 0)
   );
 
   let ws: WebSocket | null = null;
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  // Флаг останавливает авто-reconnect, когда сервер сообщил, что опрос закрыт,
+  // или когда страница демонтируется — иначе onclose снова поднимет соединение.
+  let stopReconnect = false;
 
   const activeQuestion = $derived(survey.questions[activeIdx] ?? survey.questions[0]);
   const activeWords = $derived(words[activeQuestion?.id] ?? []);
 
   function connect() {
     if (typeof window === 'undefined') return;
+    if (stopReconnect) return;
+    if (!isActive) return;
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
     const url = `${proto}://${location.host}/ws/${survey.code}?t=${encodeURIComponent(creatorToken)}`;
     wsState = 'connecting';
@@ -39,7 +53,12 @@
         if (msg.type === 'snapshot') {
           words = { ...words, [msg.questionId]: msg.words };
         } else if (msg.type === 'closed') {
+          // Сервер закрыл опрос на лету: отключаемся без reconnect и
+          // перезагружаем страницу — SSR подтянет финальный агрегат и
+          // переключит UI в режим 'sent'/'failed'/'expired'.
+          stopReconnect = true;
           ws?.close();
+          setTimeout(() => location.reload(), 250);
         }
       } catch {
         /* ignore */
@@ -47,6 +66,7 @@
     };
     ws.onclose = () => {
       wsState = 'closed';
+      if (stopReconnect) return;
       if (reconnectTimer) clearTimeout(reconnectTimer);
       reconnectTimer = setTimeout(connect, 3000);
     };
@@ -55,9 +75,12 @@
     };
   }
 
-  onMount(() => connect());
+  onMount(() => {
+    if (isActive) connect();
+  });
 
   onDestroy(() => {
+    stopReconnect = true;
     if (reconnectTimer) clearTimeout(reconnectTimer);
     if (ws && ws.readyState === ws.OPEN) ws.close(1000, 'page unload');
   });
@@ -179,13 +202,15 @@
         {finishing ? 'Завершаем…' : 'Завершить опрос'}
       </button>
     {/if}
-    <div class="ws-state ws-{wsState}" title="Соединение с сервером">
-      {wsState === 'open'
-        ? '● live'
-        : wsState === 'connecting'
-          ? '○ подключение'
-          : '○ переподключение'}
-    </div>
+    {#if isActive}
+      <div class="ws-state ws-{wsState}" title="Соединение с сервером">
+        {wsState === 'open'
+          ? '● live'
+          : wsState === 'connecting'
+            ? '○ подключение'
+            : '○ переподключение'}
+      </div>
+    {/if}
   </div>
 </header>
 
@@ -270,7 +295,11 @@
 
   <div class="canvas-wrap">
     {#if activeWords.length === 0}
-      <div class="empty">Пока нет ответов. Поделись ссылкой или QR-кодом.</div>
+      <div class="empty">
+        {isActive
+          ? 'Пока нет ответов. Поделись ссылкой или QR-кодом.'
+          : 'Голосов в этом опросе не было.'}
+      </div>
     {/if}
     <canvas bind:this={canvas} width="1200" height="700"></canvas>
   </div>
