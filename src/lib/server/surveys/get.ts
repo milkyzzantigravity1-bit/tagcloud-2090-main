@@ -6,6 +6,7 @@ export type QuestionPublic = {
   id: string;
   text: string;
   answerType: 'single' | 'multi';
+  maxAnswers: number;
   position: number;
 };
 
@@ -37,6 +38,7 @@ async function loadQuestions(surveyId: string): Promise<QuestionPublic[]> {
     id: q.id,
     text: q.text,
     answerType: q.answerType,
+    maxAnswers: q.maxAnswers,
     position: q.position
   }));
 }

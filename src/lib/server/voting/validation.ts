@@ -2,7 +2,9 @@ import { z } from 'zod';
 
 export const AnswerEntrySchema = z.object({
   questionId: z.string().uuid(),
-  words: z.array(z.string().trim().min(1).max(50)).min(1).max(20)
+  // Жёсткий потолок 50 слов на вопрос; настоящий лимит per-question
+  // (`questions.max_answers`) проверяется на сервере в validateSubmission.
+  words: z.array(z.string().trim().min(1).max(50)).min(1).max(50)
 });
 
 export const SubmitAnswersSchema = z.object({

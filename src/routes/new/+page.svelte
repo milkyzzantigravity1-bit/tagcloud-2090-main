@@ -2,7 +2,9 @@
   import type { PageProps } from './$types';
   let { data }: PageProps = $props();
 
-  type Question = { text: string; answerType: 'single' | 'multi' };
+  type Question = { text: string; answerType: 'single' | 'multi'; maxAnswers: number };
+
+  const MAX_PRESETS = [2, 3, 5, 7, 10, 20] as const;
   type CreateResult = {
     code: string;
     url: string;
@@ -17,14 +19,23 @@
   let customPalette = $state<string[]>(['#0E2A5C']);
   let durationPreset = $state<'1h' | '1d' | '7d' | 'custom'>('1d');
   let customExpiresAt = $state('');
-  let questions = $state<Question[]>([{ text: '', answerType: 'single' }]);
+  let questions = $state<Question[]>([{ text: '', answerType: 'single', maxAnswers: 5 }]);
 
   let submitting = $state(false);
   let result = $state<CreateResult | null>(null);
   let errorMessage = $state<string | null>(null);
 
   function addQuestion() {
-    if (questions.length < 50) questions.push({ text: '', answerType: 'single' });
+    if (questions.length < 50) questions.push({ text: '', answerType: 'single', maxAnswers: 5 });
+  }
+
+  function setAnswerType(i: number, t: 'single' | 'multi') {
+    questions[i].answerType = t;
+    // При переключении на multi выставляем безопасный дефолт, чтобы новый
+    // лимит сразу попал в payload (на бэке он же подставится при отсутствии).
+    if (t === 'multi' && (!questions[i].maxAnswers || questions[i].maxAnswers < 2)) {
+      questions[i].maxAnswers = 5;
+    }
   }
   function removeQuestion(i: number) {
     if (questions.length > 1) questions.splice(i, 1);
@@ -54,7 +65,11 @@
         colorScheme,
         customPalette: colorScheme === 'custom' ? customPalette : undefined,
         expiresAt: computeExpiresAt(),
-        questions: questions.map((q) => ({ text: q.text.trim(), answerType: q.answerType }))
+        questions: questions.map((q) => ({
+          text: q.text.trim(),
+          answerType: q.answerType,
+          ...(q.answerType === 'multi' ? { maxAnswers: q.maxAnswers } : {})
+        }))
       };
       const r = await fetch('/api/surveys', {
         method: 'POST',
@@ -249,12 +264,31 @@
                 class:active={questions[i].answerType === v}
                 role="radio"
                 aria-checked={questions[i].answerType === v}
-                onclick={() => (questions[i].answerType = v as 'single' | 'multi')}
+                onclick={() => setAnswerType(i, v as 'single' | 'multi')}
               >
                 {label}
               </button>
             {/each}
           </div>
+          {#if questions[i].answerType === 'multi'}
+            <div class="max-answers">
+              <span class="max-answers-label">Максимум ответов</span>
+              <div class="segmented" role="radiogroup" aria-label="Максимум ответов">
+                {#each MAX_PRESETS as n (n)}
+                  <button
+                    type="button"
+                    class="seg seg-sm"
+                    class:active={questions[i].maxAnswers === n}
+                    role="radio"
+                    aria-checked={questions[i].maxAnswers === n}
+                    onclick={() => (questions[i].maxAnswers = n)}
+                  >
+                    {n}
+                  </button>
+                {/each}
+              </div>
+            </div>
+          {/if}
         </div>
       {/each}
       <button
@@ -414,6 +448,18 @@
     justify-content: space-between;
     align-items: center;
     gap: var(--space-2);
+  }
+  .max-answers {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding-top: var(--space-2);
+    border-top: 1px dashed var(--c-border);
+  }
+  .max-answers-label {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--c-muted);
   }
   .q-head strong {
     font-weight: 500;

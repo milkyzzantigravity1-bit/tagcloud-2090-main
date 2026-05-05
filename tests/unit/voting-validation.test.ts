@@ -19,8 +19,8 @@ describe('AnswerEntrySchema', () => {
     expect(AnswerEntrySchema.safeParse({ questionId: UUID, words: [] }).success).toBe(false);
   });
 
-  it('ругается на >20 слов', () => {
-    const words = Array.from({ length: 21 }, (_, i) => `w${i}`);
+  it('ругается на >50 слов (жёсткий потолок схемы)', () => {
+    const words = Array.from({ length: 51 }, (_, i) => `w${i}`);
     expect(AnswerEntrySchema.safeParse({ questionId: UUID, words }).success).toBe(false);
   });
 

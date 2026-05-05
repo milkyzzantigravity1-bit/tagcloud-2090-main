@@ -40,8 +40,13 @@
     answers[qid][idx] = stripWhitespace(value);
   }
 
+  function maxFor(qid: string): number {
+    const q = survey.questions.find((q) => q.id === qid);
+    return q?.maxAnswers ?? 20;
+  }
+
   function addWord(qid: string) {
-    if (answers[qid].length < 20) answers[qid].push('');
+    if (answers[qid].length < maxFor(qid)) answers[qid].push('');
   }
 
   function removeWord(qid: string, idx: number) {
@@ -183,10 +188,12 @@
                 </button>
               </div>
             {/each}
-            {#if answers[q.id].length < 20}
+            {#if answers[q.id].length < q.maxAnswers}
               <button type="button" class="btn btn-ghost btn-sm" onclick={() => addWord(q.id)}>
-                + слово ({answers[q.id].length}/20)
+                + слово ({answers[q.id].length}/{q.maxAnswers})
               </button>
+            {:else}
+              <div class="hint">Максимум {q.maxAnswers} слов</div>
             {/if}
           </div>
         {/if}
