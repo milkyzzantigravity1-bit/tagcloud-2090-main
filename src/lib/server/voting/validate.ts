@@ -4,7 +4,8 @@ import { surveys, questions } from '../schema';
 import type { AnswerEntry } from './validation';
 
 export const MAX_WORD_LENGTH = 50;
-export const MAX_MULTI_WORDS = 20;
+/** Жёсткий потолок multi-вопросов (см. CHECK constraint в миграции 0004). */
+export const MAX_MULTI_WORDS = 50;
 
 export type ValidationError =
   | { code: 'survey_not_found'; message: string }
@@ -81,13 +82,14 @@ export async function validateSubmission(
         };
       }
     } else {
-      if (words.length === 0 || words.length > MAX_MULTI_WORDS) {
+      const limit = question.maxAnswers ?? MAX_MULTI_WORDS;
+      if (words.length === 0 || words.length > limit) {
         return {
           ok: false,
           error: {
             code: 'too_many_words',
-            max: MAX_MULTI_WORDS,
-            message: `Допустимо от 1 до ${MAX_MULTI_WORDS} слов`,
+            max: limit,
+            message: `Допустимо от 1 до ${limit} слов`,
             questionId: question.id
           }
         };

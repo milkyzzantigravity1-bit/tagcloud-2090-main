@@ -4,10 +4,17 @@ const HEX_COLOR = /^#[0-9A-Fa-f]{6}$/;
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
 
-export const QuestionInputSchema = z.object({
-  text: z.string().trim().min(1, 'Текст вопроса обязателен').max(500),
-  answerType: z.enum(['single', 'multi'])
-});
+export const QuestionInputSchema = z
+  .object({
+    text: z.string().trim().min(1, 'Текст вопроса обязателен').max(500),
+    answerType: z.enum(['single', 'multi']),
+    maxAnswers: z.number().int().min(1, 'Минимум 1 ответ').max(50, 'Максимум 50 ответов').optional()
+  })
+  .transform((q) => ({
+    ...q,
+    // single = всегда 1 ответ; multi с пропущенным maxAnswers = старый дефолт (20).
+    maxAnswers: q.answerType === 'single' ? 1 : (q.maxAnswers ?? 20)
+  }));
 
 export const CreateSurveySchema = z
   .object({

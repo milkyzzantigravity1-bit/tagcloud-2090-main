@@ -46,6 +46,7 @@ export async function createSurvey(
         surveyId: survey.id,
         text: q.text,
         answerType: q.answerType,
+        maxAnswers: q.maxAnswers,
         position: i
       }))
     );

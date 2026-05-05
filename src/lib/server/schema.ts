@@ -90,6 +90,7 @@ export const questions = pgTable(
       .references(() => surveys.id, { onDelete: 'cascade' }),
     text: text('text').notNull(),
     answerType: answerType('answer_type').notNull(),
+    maxAnswers: integer('max_answers').notNull().default(20),
     position: integer('position').notNull()
   },
   (t) => ({
