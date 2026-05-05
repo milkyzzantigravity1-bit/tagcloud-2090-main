@@ -88,7 +88,10 @@
 
 <svelte:head><title>Мои опросы — Облако тегов 2090</title></svelte:head>
 
-<h1>Мои опросы</h1>
+<div class="head">
+  <h1>Мои опросы</h1>
+  <a class="btn btn-primary" href="/new">Создать опрос</a>
+</div>
 
 {#if data.surveys.length === 0}
   <div class="empty">
@@ -164,8 +167,15 @@
 {/if}
 
 <style>
+  .head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-6);
+    gap: var(--space-3);
+  }
   h1 {
-    margin: 0 0 var(--space-6);
+    margin: 0;
   }
   .empty {
     text-align: center;
@@ -240,6 +250,13 @@
   }
 
   @media (max-width: 640px) {
+    .head {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .head .btn {
+      width: 100%;
+    }
     .card-head {
       flex-direction: column;
       align-items: flex-start;
