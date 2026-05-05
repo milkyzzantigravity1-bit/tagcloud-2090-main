@@ -29,8 +29,6 @@
 
   let ws: WebSocket | null = null;
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-  // Флаг останавливает авто-reconnect, когда сервер сообщил, что опрос закрыт,
-  // или когда страница демонтируется — иначе onclose снова поднимет соединение.
   let stopReconnect = false;
 
   const activeQuestion = $derived(survey.questions[activeIdx] ?? survey.questions[0]);
@@ -53,9 +51,6 @@
         if (msg.type === 'snapshot') {
           words = { ...words, [msg.questionId]: msg.words };
         } else if (msg.type === 'closed') {
-          // Сервер закрыл опрос на лету: отключаемся без reconnect и
-          // перезагружаем страницу — SSR подтянет финальный агрегат и
-          // переключит UI в режим 'sent'/'failed'/'expired'.
           stopReconnect = true;
           ws?.close();
           setTimeout(() => location.reload(), 250);
@@ -109,8 +104,21 @@
     };
   });
 
-  async function copy(text: string) {
-    await navigator.clipboard.writeText(text);
+  let copyDoneCode = $state(false);
+  let copyDoneLink = $state(false);
+  async function copyCode() {
+    try {
+      await navigator.clipboard.writeText(survey.code);
+      copyDoneCode = true;
+      setTimeout(() => (copyDoneCode = false), 1500);
+    } catch {}
+  }
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(respondentUrl);
+      copyDoneLink = true;
+      setTimeout(() => (copyDoneLink = false), 1500);
+    } catch {}
   }
 
   function downloadPng() {
@@ -128,6 +136,7 @@
     return `/api/surveys/${survey.code}/export.csv?t=${encodeURIComponent(creatorToken)}`;
   }
 
+  let confirmFinish = $state(false);
   let finishing = $state(false);
   let finishError = $state<string | null>(null);
   let retrying = $state(false);
@@ -155,12 +164,6 @@
   }
 
   async function finishSurvey() {
-    if (
-      !confirm(
-        'Точно завершить опрос?\n\nПосле завершения голосование закроется, агрегат отправится на email создателя. Отменить нельзя.'
-      )
-    )
-      return;
     finishing = true;
     finishError = null;
     try {
@@ -173,104 +176,160 @@
         finishError = data.error?.message ?? `Ошибка ${r.status}`;
         return;
       }
-      // status: 'sent' | 'failed' — перезагружаем страницу чтобы увидеть финал
       window.location.reload();
     } catch (e) {
       finishError = (e as Error).message;
     } finally {
       finishing = false;
+      confirmFinish = false;
     }
   }
 
   function fmtDate(d: string | Date): string {
     return new Date(d).toLocaleString('ru-RU', { dateStyle: 'long', timeStyle: 'short' });
   }
+
+  function statusBadge(s: string): { text: string; cls: string } {
+    switch (s) {
+      case 'active':
+        return { text: 'Активен', cls: 'badge badge-active' };
+      case 'sent':
+        return { text: 'Отправлен', cls: 'badge badge-success' };
+      case 'failed':
+        return { text: 'Ошибка отправки', cls: 'badge badge-danger' };
+      case 'expired':
+        return { text: 'Обработка', cls: 'badge badge-muted' };
+      default:
+        return { text: s, cls: 'badge badge-muted' };
+    }
+  }
+
+  const status = $derived(statusBadge(survey.status));
 </script>
 
 <svelte:head><title>Дашборд · {survey.title ?? survey.code}</title></svelte:head>
 
 <header class="title-row">
-  <div>
-    <h1>{survey.title ?? 'Опрос'}</h1>
+  <div class="title-info">
+    <div class="title-line">
+      <h1>{survey.title ?? 'Опрос'}</h1>
+      <span class={status.cls}>{status.text}</span>
+    </div>
     <p class="muted">
-      Истекает: {fmtDate(survey.expiresAt)} · Статус: {survey.status} · Голосов: {totalVotes}
+      Истекает {fmtDate(survey.expiresAt)} · {totalVotes}
+      {totalVotes === 1 ? 'голос' : totalVotes >= 2 && totalVotes <= 4 ? 'голоса' : 'голосов'}
     </p>
   </div>
   <div class="title-actions">
-    {#if survey.status === 'active'}
-      <button class="danger" onclick={finishSurvey} disabled={finishing}>
-        {finishing ? 'Завершаем…' : 'Завершить опрос'}
-      </button>
-    {/if}
     {#if isActive}
-      <div class="ws-state ws-{wsState}" title="Соединение с сервером">
-        {wsState === 'open'
-          ? '● live'
-          : wsState === 'connecting'
-            ? '○ подключение'
-            : '○ переподключение'}
-      </div>
+      <span class="ws-state ws-{wsState}" title="Соединение с сервером">
+        {#if wsState === 'open'}
+          <span class="ws-dot ws-dot-live"></span>
+          live
+        {:else if wsState === 'connecting'}
+          <span class="ws-dot"></span>
+          подключение
+        {:else}
+          <span class="ws-dot ws-dot-off"></span>
+          переподключение
+        {/if}
+      </span>
+      {#if !confirmFinish}
+        <button class="btn btn-danger btn-sm" onclick={() => (confirmFinish = true)}>
+          Завершить
+        </button>
+      {/if}
     {/if}
   </div>
 </header>
 
-{#if finishError}
-  <div class="banner-error">{finishError}</div>
-{/if}
-{#if retryError}
-  <div class="banner-error">{retryError}</div>
-{/if}
-
-{#if survey.status !== 'active'}
-  <div class="banner-info">
-    {#if survey.status === 'sent'}
-      ✓ Опрос завершён. Письмо с результатами отправлено на <strong>{survey.creatorEmail}</strong>.
-    {:else if survey.status === 'failed'}
-      ⚠ Опрос завершён, но <strong>письмо не дошло</strong> (проверь сеть/SMTP). Можно скачать CSV
-      ниже или повторить отправку:
-      <button class="primary inline-btn" onclick={retrySend} disabled={retrying}>
-        {retrying ? 'Отправляем…' : 'Повторить отправку'}
+{#if confirmFinish}
+  <div class="alert alert-warn">
+    <div class="alert-text">
+      <strong>Завершить опрос?</strong>
+      Голосование закроется, агрегат отправится на email. Отменить нельзя.
+    </div>
+    <div class="alert-actions">
+      <button class="btn btn-danger btn-sm" onclick={finishSurvey} disabled={finishing}>
+        {finishing ? 'Завершаем…' : 'Да, завершить'}
       </button>
-    {:else if survey.status === 'expired'}
-      ⏳ Голосование закрыто, идёт обработка результатов и отправка email…
-      <button class="ghost inline-btn" onclick={() => location.reload()}>Обновить</button>
-      <br />
-      Если состояние не меняется больше минуты — нажми ниже:
-      <button class="primary inline-btn" onclick={retrySend} disabled={retrying}>
-        {retrying ? 'Отправляем…' : 'Принудительно отправить'}
-      </button>
-    {:else}
-      Статус: {survey.status}. Голосование закрыто.
-    {/if}
+      <button class="btn btn-ghost btn-sm" onclick={() => (confirmFinish = false)}>Отмена</button>
+    </div>
   </div>
 {/if}
 
-<div class="grid">
-  <section class="card">
-    <h2>Код</h2>
-    <div class="big-code">{survey.code}</div>
-  </section>
+{#if finishError}
+  <div class="alert alert-error">{finishError}</div>
+{/if}
+{#if retryError}
+  <div class="alert alert-error">{retryError}</div>
+{/if}
 
-  <section class="card">
-    <h2>Ссылка</h2>
-    <div class="link-row">
-      <code>{respondentUrl}</code>
-      <button class="ghost" onclick={() => copy(respondentUrl)}>Копировать</button>
+{#if survey.status === 'sent'}
+  <div class="alert alert-success">
+    Опрос завершён. Письмо с результатами отправлено на <strong>{survey.creatorEmail}</strong>.
+  </div>
+{:else if survey.status === 'failed'}
+  <div class="alert alert-warn">
+    <div class="alert-text">
+      Опрос завершён, но <strong>письмо не дошло</strong>. Можно скачать CSV ниже или повторить
+      отправку.
     </div>
-  </section>
+    <div class="alert-actions">
+      <button class="btn btn-primary btn-sm" onclick={retrySend} disabled={retrying}>
+        {retrying ? 'Отправляем…' : 'Повторить отправку'}
+      </button>
+    </div>
+  </div>
+{:else if survey.status === 'expired'}
+  <div class="alert alert-warn">
+    <div class="alert-text">
+      Голосование закрыто, идёт обработка результатов и отправка email. Если состояние не меняется
+      больше минуты — нажмите ниже.
+    </div>
+    <div class="alert-actions">
+      <button class="btn btn-ghost btn-sm" onclick={() => location.reload()}>Обновить</button>
+      <button class="btn btn-primary btn-sm" onclick={retrySend} disabled={retrying}>
+        {retrying ? 'Отправляем…' : 'Принудительно отправить'}
+      </button>
+    </div>
+  </div>
+{/if}
 
-  <section class="card qr-card">
-    <h2>QR-код</h2>
-    <img class="qr" src={qrPngBase64Data} alt="QR код опроса" />
-  </section>
-</div>
+<section class="card share">
+  <div class="share-info">
+    <div class="share-block">
+      <h2 class="share-h">Код опроса</h2>
+      <div class="big-code-row">
+        <span class="big-code">{survey.code}</span>
+        <button class="btn btn-ghost btn-sm" onclick={copyCode}>
+          {copyDoneCode ? 'Скопировано' : 'Копировать'}
+        </button>
+      </div>
+    </div>
+    <div class="share-block">
+      <h2 class="share-h">Ссылка для респондентов</h2>
+      <div class="link-row">
+        <code>{respondentUrl}</code>
+        <button class="btn btn-ghost btn-sm" onclick={copyLink}>
+          {copyDoneLink ? 'Скопировано' : 'Копировать'}
+        </button>
+      </div>
+    </div>
+  </div>
+  <img class="qr" src={qrPngBase64Data} alt="QR код опроса" />
+</section>
 
 <section class="card cloud-card">
   <div class="cloud-head">
     <h2>Облако</h2>
     <div class="cloud-actions">
-      <a class="ghost-link" href={csvUrl()}>Скачать CSV</a>
-      <button class="ghost" onclick={downloadPng} disabled={activeWords.length === 0}>
+      <a class="btn btn-ghost btn-sm" href={csvUrl()}>Скачать CSV</a>
+      <button
+        class="btn btn-ghost btn-sm"
+        onclick={downloadPng}
+        disabled={activeWords.length === 0}
+      >
         Скачать PNG
       </button>
     </div>
@@ -297,7 +356,7 @@
     {#if activeWords.length === 0}
       <div class="empty">
         {isActive
-          ? 'Пока нет ответов. Поделись ссылкой или QR-кодом.'
+          ? 'Пока нет ответов. Поделитесь ссылкой или QR-кодом.'
           : 'Голосов в этом опросе не было.'}
       </div>
     {/if}
@@ -311,156 +370,171 @@
     justify-content: space-between;
     align-items: flex-start;
     gap: var(--space-4);
-    margin-bottom: var(--space-8);
+    margin-bottom: var(--space-6);
   }
-  h1 {
-    margin-bottom: var(--space-1);
+  .title-info {
+    min-width: 0;
+    flex: 1;
   }
-  .muted {
-    color: var(--c-muted);
-    margin: 0;
-  }
-  .title-actions {
+  .title-line {
     display: flex;
     align-items: center;
     gap: var(--space-3);
     flex-wrap: wrap;
   }
+  h1 {
+    margin: 0 0 var(--space-1);
+  }
+  .muted {
+    color: var(--c-muted);
+    margin: 0;
+    font-size: 0.9375rem;
+  }
+  .title-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+  }
+
+  /* ─── WS-индикатор ──────────────────── */
   .ws-state {
-    font-size: 0.85rem;
-    padding: var(--space-1) var(--space-3);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8125rem;
+    padding: 4px 10px;
     border-radius: 999px;
+    background: var(--c-bg);
     border: 1px solid var(--c-border);
+    color: var(--c-muted);
     white-space: nowrap;
   }
-  .ws-open {
-    color: var(--c-blue);
-    border-color: var(--c-blue);
+  .ws-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--c-muted);
   }
-  .ws-connecting {
-    color: var(--c-muted);
+  .ws-dot-live {
+    background: var(--c-success);
+    box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.45);
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  .ws-dot-off {
+    background: var(--c-danger);
+  }
+  .ws-open {
+    color: var(--c-success);
   }
   .ws-closed {
     color: var(--c-danger);
-    border-color: var(--c-danger);
+  }
+  @keyframes pulse {
+    0%,
+    100% {
+      box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.45);
+    }
+    50% {
+      box-shadow: 0 0 0 5px rgba(22, 163, 74, 0);
+    }
   }
 
-  button.danger {
-    background: transparent;
-    color: var(--c-danger);
-    border: 1px solid var(--c-danger);
-    padding: var(--space-2) var(--space-4);
+  /* ─── Алерты ──────────────────── */
+  .alert {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    align-items: center;
+    padding: var(--space-3) var(--space-4);
     border-radius: var(--radius);
-    font-weight: 500;
-    font-family: inherit;
-    font-size: 0.875rem;
-    cursor: pointer;
-  }
-  button.danger:hover {
-    background: #fef2f2;
-  }
-  button.danger:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  .banner-error {
-    background: #fef2f2;
-    color: var(--c-danger);
-    padding: var(--space-3);
-    border-radius: var(--radius);
-    border: 1px solid #fecaca;
+    border: 1px solid;
     margin-bottom: var(--space-4);
+    font-size: 0.9375rem;
+    line-height: 1.5;
   }
-  .banner-info {
-    background: var(--c-surface);
+  .alert-text {
+    flex: 1;
+    min-width: 200px;
+  }
+  .alert-actions {
+    display: flex;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+  }
+  .alert-error {
+    background: var(--c-danger-bg);
+    color: var(--c-danger);
+    border-color: var(--c-danger-border);
+  }
+  .alert-success {
+    background: var(--c-success-bg);
+    color: var(--c-success);
+    border-color: var(--c-success-border);
+  }
+  .alert-warn {
+    background: var(--c-warn-bg);
     color: var(--c-text);
-    padding: var(--space-4);
-    border-radius: var(--radius);
-    border-left: 4px solid var(--c-navy);
-    margin-bottom: var(--space-4);
-    line-height: 1.6;
-  }
-  .inline-btn {
-    margin-left: var(--space-2);
-    padding: var(--space-1) var(--space-3);
-    border-radius: var(--radius);
-    font-family: inherit;
-    font-size: 0.875rem;
-    cursor: pointer;
-    border: 1px solid transparent;
-  }
-  .inline-btn.primary {
-    background: var(--c-navy);
-    color: white;
-  }
-  .inline-btn.ghost {
-    background: transparent;
-    color: var(--c-navy);
-    border-color: var(--c-border);
-  }
-  .inline-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+    border-color: var(--c-warn-border);
   }
 
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: var(--space-4);
-    margin-bottom: var(--space-4);
-  }
-  .card {
-    background: var(--c-surface);
+  /* ─── Share-карта ──────────────────── */
+  .share {
+    display: flex;
+    gap: var(--space-6);
+    align-items: flex-start;
+    flex-wrap: wrap;
     padding: var(--space-6);
-    border-radius: var(--radius-lg);
   }
-  .card h2 {
-    margin-top: 0;
-    font-size: 0.85rem;
-    color: var(--c-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    font-weight: 600;
+  .share-info {
+    flex: 1;
+    min-width: 240px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
   }
-  .big-code {
-    font-size: 2.5rem;
-    font-weight: 700;
-    color: var(--c-navy);
-    letter-spacing: 0.15em;
-    font-family: 'SF Mono', Menlo, monospace;
-  }
-  .link-row {
+  .share-block {
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
-    align-items: stretch;
+  }
+  .share-h {
+    font-size: 0.75rem;
+    color: var(--c-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+    margin: 0;
+  }
+  .big-code-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+  }
+  .big-code {
+    font-size: 2.25rem;
+    font-weight: 700;
+    color: var(--c-navy);
+    letter-spacing: 0.15em;
+    font-family: var(--font-mono);
+    line-height: 1;
+  }
+  .link-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-wrap: wrap;
   }
   .link-row code {
-    padding: var(--space-2);
+    flex: 1;
+    min-width: 200px;
+    padding: var(--space-2) var(--space-3);
+    background: var(--c-bg);
+    border: 1px solid var(--c-border);
+    border-radius: var(--radius);
     font-size: 0.875rem;
     word-break: break-all;
-    white-space: normal;
-    line-height: 1.4;
-  }
-  .link-row button {
-    align-self: flex-start;
-  }
-  button.ghost {
-    background: transparent;
-    color: var(--c-navy);
-    border: 1px solid var(--c-border);
-    padding: var(--space-2) var(--space-3);
-    border-radius: var(--radius);
-    font-family: inherit;
-    font-size: 0.875rem;
-  }
-  button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-  .qr-card {
-    text-align: center;
   }
   .qr {
     width: 180px;
@@ -468,8 +542,11 @@
     image-rendering: pixelated;
     border: 1px solid var(--c-border);
     border-radius: var(--radius);
+    background: #fff;
+    flex-shrink: 0;
   }
 
+  /* ─── Облако ──────────────────── */
   .cloud-card {
     margin-top: var(--space-4);
   }
@@ -478,6 +555,8 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: var(--space-3);
+    gap: var(--space-3);
+    flex-wrap: wrap;
   }
   .cloud-head h2 {
     margin: 0;
@@ -485,21 +564,6 @@
   .cloud-actions {
     display: flex;
     gap: var(--space-2);
-  }
-  .ghost-link {
-    background: transparent;
-    color: var(--c-navy);
-    border: 1px solid var(--c-border);
-    padding: var(--space-2) var(--space-3);
-    border-radius: var(--radius);
-    font-family: inherit;
-    font-size: 0.875rem;
-    text-decoration: none;
-    display: inline-block;
-  }
-  .ghost-link:hover {
-    background: var(--c-surface);
-    text-decoration: none;
   }
   .tabs {
     display: flex;
@@ -511,11 +575,18 @@
     background: transparent;
     color: var(--c-muted);
     border: 1px solid var(--c-border);
-    padding: var(--space-2) var(--space-3);
+    padding: 6px 12px;
     border-radius: var(--radius);
     font-family: inherit;
     font-size: 0.875rem;
     cursor: pointer;
+    transition:
+      background-color 120ms,
+      color 120ms;
+  }
+  .tab:hover:not(.active) {
+    background: var(--c-surface);
+    color: var(--c-text);
   }
   .tab.active {
     background: var(--c-navy);
@@ -557,34 +628,29 @@
   @media (max-width: 720px) {
     .title-row {
       flex-direction: column;
-      align-items: flex-start;
+      align-items: stretch;
     }
-    .grid {
-      grid-template-columns: 1fr;
+    .share {
+      flex-direction: column-reverse;
+      align-items: center;
     }
-    .qr-card {
-      order: -1;
+    .share-info {
+      width: 100%;
     }
     .qr {
       width: 200px;
       height: 200px;
     }
     .big-code {
-      font-size: 2rem;
-      text-align: center;
+      font-size: 1.875rem;
     }
     .cloud-head {
       flex-direction: column;
-      align-items: flex-start;
-      gap: var(--space-3);
+      align-items: stretch;
     }
     .cloud-actions {
-      width: 100%;
-    }
-    .cloud-actions .ghost-link,
-    .cloud-actions button {
-      flex: 1;
-      text-align: center;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
     }
     .canvas-wrap {
       aspect-ratio: 4 / 5;
@@ -592,6 +658,7 @@
     .tabs {
       overflow-x: auto;
       flex-wrap: nowrap;
+      scrollbar-width: thin;
     }
     .tab {
       white-space: nowrap;

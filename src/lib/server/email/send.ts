@@ -6,6 +6,8 @@ export type EmailAttachment = {
   filename: string;
   content: Buffer;
   contentType?: string;
+  /** Если задан — вложение становится inline и доступно в HTML как `cid:<value>`. */
+  cid?: string;
 };
 
 export type SendResultsInput = {
@@ -24,9 +26,14 @@ export async function sendResultsEmail(input: SendResultsInput): Promise<void> {
   await t.sendMail({
     from: fromAddr,
     to: input.to,
-    subject: `Результаты опроса "${input.surveyTitle}"`,
+    subject: `Результаты опроса «${input.surveyTitle}»`,
     text: resultsText(input),
     html: resultsHtml(input),
-    attachments: input.attachments
+    attachments: input.attachments.map((a) => ({
+      filename: a.filename,
+      content: a.content,
+      contentType: a.contentType,
+      ...(a.cid ? { cid: a.cid } : {})
+    }))
   });
 }

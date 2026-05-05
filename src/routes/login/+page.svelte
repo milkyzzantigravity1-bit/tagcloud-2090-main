@@ -63,11 +63,19 @@
   >
     <label>
       <span>Email</span>
-      <input type="email" bind:value={email} required autocomplete="email" maxlength="254" />
+      <input
+        class="input"
+        type="email"
+        bind:value={email}
+        required
+        autocomplete="email"
+        maxlength="254"
+      />
     </label>
     <label>
       <span>Пароль</span>
       <input
+        class="input"
         type="password"
         bind:value={password}
         required
@@ -77,12 +85,17 @@
       />
     </label>
     {#if errorMessage}
-      <div class="error">{errorMessage}</div>
+      <div class="alert alert-error">{errorMessage}</div>
     {/if}
     {#if needsVerification}
-      <div class="warn">
-        Email не подтверждён. Откройте письмо со ссылкой или запросите новое.
-        <button type="button" class="link" onclick={resend} disabled={resending || resendDone}>
+      <div class="alert alert-warn">
+        <p>Email не подтверждён. Откройте письмо со ссылкой или запросите новое.</p>
+        <button
+          type="button"
+          class="btn btn-ghost btn-sm"
+          onclick={resend}
+          disabled={resending || resendDone}
+        >
           {#if resendDone}
             Письмо отправлено
           {:else if resending}
@@ -93,11 +106,11 @@
         </button>
       </div>
     {/if}
-    <button type="submit" class="primary" disabled={submitting}>
+    <button type="submit" class="btn btn-primary btn-block" disabled={submitting}>
       {submitting ? 'Входим…' : 'Войти'}
     </button>
   </form>
-  <p class="muted">Нет аккаунта? <a href="/register">Регистрация</a></p>
+  <p class="footer-link">Нет аккаунта? <a href="/register">Регистрация</a></p>
 </div>
 
 <style>
@@ -115,6 +128,7 @@
     background: var(--c-surface);
     padding: var(--space-6);
     border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
   }
   label {
     display: flex;
@@ -124,56 +138,29 @@
   label > span {
     font-weight: 500;
   }
-  input {
+  .alert {
     padding: var(--space-3);
-    border: 1px solid var(--c-border);
     border-radius: var(--radius);
-    font-family: inherit;
-    font-size: 1rem;
+    border: 1px solid;
+    font-size: 0.9rem;
   }
-  button.primary {
-    background: var(--c-navy);
-    color: white;
-    border: 0;
-    padding: var(--space-3) var(--space-6);
-    border-radius: var(--radius);
-    font-weight: 500;
-    font-family: inherit;
-    font-size: 1rem;
-  }
-  button:disabled {
-    opacity: 0.5;
-  }
-  .error {
-    background: #fef2f2;
+  .alert-error {
+    background: var(--c-danger-bg);
     color: var(--c-danger);
-    padding: var(--space-3);
-    border-radius: var(--radius);
-    border: 1px solid #fecaca;
-    font-size: 0.9rem;
+    border-color: var(--c-danger-border);
   }
-  .warn {
-    background: #fffbeb;
-    color: #92400e;
-    padding: var(--space-3);
-    border-radius: var(--radius);
-    border: 1px solid #fde68a;
-    font-size: 0.9rem;
+  .alert-warn {
+    background: var(--c-warn-bg);
+    color: var(--c-warn-fg);
+    border-color: var(--c-warn-border);
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
   }
-  button.link {
-    background: transparent;
-    color: var(--c-navy);
-    border: 0;
-    padding: 0;
-    text-align: left;
-    font: inherit;
-    cursor: pointer;
-    text-decoration: underline;
+  .alert-warn p {
+    margin: 0;
   }
-  .muted {
+  .footer-link {
     color: var(--c-muted);
     margin-top: var(--space-4);
     text-align: center;
@@ -185,13 +172,6 @@
     }
     form {
       padding: var(--space-4);
-    }
-    button.primary {
-      width: 100%;
-      padding: var(--space-4);
-    }
-    input {
-      font-size: 16px;
     }
   }
 </style>

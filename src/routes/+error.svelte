@@ -7,7 +7,7 @@
 <div class="wrap">
   <div class="status">{page.status}</div>
   <h1>{page.error?.message ?? 'Что-то пошло не так'}</h1>
-  <a href="/" class="btn">← На главную</a>
+  <a href="/" class="btn btn-primary">← На главную</a>
 </div>
 
 <style>
@@ -25,15 +25,6 @@
   h1 {
     margin: var(--space-4) 0 var(--space-8);
     color: var(--c-text);
-    font-weight: 500;
-  }
-  .btn {
-    display: inline-block;
-    background: var(--c-navy);
-    color: white;
-    padding: var(--space-3) var(--space-6);
-    border-radius: var(--radius);
-    text-decoration: none;
     font-weight: 500;
   }
 </style>

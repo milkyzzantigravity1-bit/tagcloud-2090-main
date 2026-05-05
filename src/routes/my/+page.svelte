@@ -6,35 +6,57 @@
     return new Date(d).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' });
   }
 
-  function statusLabel(s: string): { text: string; className: string } {
+  function plural(n: number, [one, few, many]: [string, string, string]): string {
+    const mod10 = n % 10;
+    const mod100 = n % 100;
+    if (mod10 === 1 && mod100 !== 11) return one;
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return few;
+    return many;
+  }
+
+  function statusBadge(s: string): { text: string; cls: string; title?: string } {
     switch (s) {
       case 'active':
-        return { text: 'Активен', className: 'st-active' };
+        return { text: 'Активен', cls: 'badge badge-active' };
       case 'sent':
-        return { text: 'Завершён, письмо отправлено', className: 'st-sent' };
+        return { text: 'Отправлен', cls: 'badge badge-success' };
       case 'failed':
-        return { text: 'Завершён, ошибка отправки', className: 'st-failed' };
+        return {
+          text: 'Ошибка отправки',
+          cls: 'badge badge-danger',
+          title: 'Email не дошёл — нажмите «Повторить отправку»'
+        };
       case 'expired':
-        return { text: 'Истёк', className: 'st-expired' };
+        return {
+          text: 'Истёк',
+          cls: 'badge badge-muted',
+          title: 'Срок голосования истёк, обработка результатов'
+        };
       default:
-        return { text: s, className: '' };
+        return { text: s, cls: 'badge badge-muted' };
     }
   }
 
-  function copy(text: string, e: Event) {
+  let copying = $state<string | null>(null);
+  async function copyLink(code: string, e: Event) {
     e.preventDefault();
-    navigator.clipboard.writeText(text);
+    try {
+      await navigator.clipboard.writeText(`${location.origin}/r/${code}`);
+      copying = code;
+      setTimeout(() => {
+        if (copying === code) copying = null;
+      }, 1500);
+    } catch {}
   }
 
   let finishing = $state<string | null>(null);
   let retrying = $state<string | null>(null);
 
+  let confirmCode = $state<string | null>(null);
+
   async function finishSurvey(code: string) {
-    if (
-      !confirm('Точно завершить опрос ' + code + '? Голосование закроется, отчёт уйдёт на email.')
-    )
-      return;
     finishing = code;
+    confirmCode = null;
     try {
       const r = await fetch(`/api/surveys/${code}/finish`, { method: 'POST' });
       if (r.ok) {
@@ -68,52 +90,68 @@
 
 <div class="head">
   <h1>Мои опросы</h1>
-  <a class="cta" href="/new">+ Создать опрос</a>
+  <a class="btn btn-primary" href="/new">+ Создать опрос</a>
 </div>
 
 {#if data.surveys.length === 0}
   <div class="empty">
-    <p>У тебя пока нет опросов.</p>
-    <a class="cta" href="/new">Создать первый</a>
+    <p>У вас пока нет опросов.</p>
+    <a class="btn btn-primary btn-lg" href="/new">Создать первый</a>
   </div>
 {:else}
   <ul class="list">
     {#each data.surveys as s (s.code)}
-      {@const status = statusLabel(s.status)}
+      {@const status = statusBadge(s.status)}
       <li class="card">
         <div class="card-head">
           <a class="title" href={`/s/${s.code}`}>
             {s.title ?? `Опрос ${s.code}`}
           </a>
-          <span class="status {status.className}">{status.text}</span>
+          <span class={status.cls} title={status.title ?? ''}>{status.text}</span>
         </div>
         <div class="meta">
           <code class="code">{s.code}</code>
-          <span class="dot">·</span>
-          <span>{s.questionsCount} вопрос(а)</span>
-          <span class="dot">·</span>
-          <span>{s.responsesCount} голос(ов)</span>
-          <span class="dot">·</span>
+          <span>
+            {s.questionsCount}
+            {plural(s.questionsCount, ['вопрос', 'вопроса', 'вопросов'])}
+          </span>
+          <span>
+            {s.responsesCount}
+            {plural(s.responsesCount, ['ответ', 'ответа', 'ответов'])}
+          </span>
           <span>истекает {fmtDate(s.expiresAt)}</span>
         </div>
         <div class="actions">
-          <a class="btn" href={`/s/${s.code}`}>Дашборд</a>
-          <a class="btn ghost" href={`/r/${s.code}`} target="_blank" rel="noopener"
-            >Ссылка для голосования ↗</a
-          >
-          <button class="btn ghost" onclick={(e) => copy(`${location.origin}/r/${s.code}`, e)}
-            >Копировать ссылку</button
-          >
+          <a class="btn btn-primary btn-sm" href={`/s/${s.code}`}>Дашборд</a>
+          <button class="btn btn-ghost btn-sm" onclick={(e) => copyLink(s.code, e)}>
+            {copying === s.code ? 'Скопировано' : 'Копировать ссылку'}
+          </button>
           {#if s.status === 'active'}
-            <button
-              class="btn danger"
-              onclick={() => finishSurvey(s.code)}
-              disabled={finishing === s.code}
-            >
-              {finishing === s.code ? 'Завершаем…' : 'Завершить'}
-            </button>
+            {#if confirmCode === s.code}
+              <span class="confirm-inline">
+                Завершить опрос?
+                <button
+                  class="btn btn-danger btn-sm"
+                  onclick={() => finishSurvey(s.code)}
+                  disabled={finishing === s.code}
+                >
+                  {finishing === s.code ? 'Завершаем…' : 'Да, завершить'}
+                </button>
+                <button class="btn btn-ghost btn-sm" onclick={() => (confirmCode = null)}>
+                  Отмена
+                </button>
+              </span>
+            {:else}
+              <button class="btn btn-danger btn-sm" onclick={() => (confirmCode = s.code)}>
+                Завершить
+              </button>
+            {/if}
           {:else if s.status === 'failed' || s.status === 'expired'}
-            <button class="btn" onclick={() => retrySend(s.code)} disabled={retrying === s.code}>
+            <button
+              class="btn btn-primary btn-sm"
+              onclick={() => retrySend(s.code)}
+              disabled={retrying === s.code}
+            >
               {retrying === s.code ? 'Отправляем…' : 'Повторить отправку'}
             </button>
           {/if}
@@ -129,17 +167,10 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: var(--space-6);
+    gap: var(--space-3);
   }
   h1 {
     margin: 0;
-  }
-  .cta {
-    background: var(--c-navy);
-    color: white;
-    padding: var(--space-3) var(--space-4);
-    border-radius: var(--radius);
-    text-decoration: none;
-    font-weight: 500;
   }
   .empty {
     text-align: center;
@@ -149,6 +180,7 @@
   .empty p {
     margin-bottom: var(--space-4);
   }
+
   .list {
     list-style: none;
     padding: 0;
@@ -157,11 +189,7 @@
     flex-direction: column;
     gap: var(--space-3);
   }
-  .card {
-    background: var(--c-surface);
-    padding: var(--space-4);
-    border-radius: var(--radius-lg);
-  }
+
   .card-head {
     display: flex;
     justify-content: space-between;
@@ -178,110 +206,67 @@
   .title:hover {
     text-decoration: underline;
   }
-  .status {
-    font-size: 0.8rem;
-    padding: 2px 10px;
-    border-radius: 999px;
-    white-space: nowrap;
-  }
-  .st-active {
-    background: #dbeafe;
-    color: #1e3a8a;
-  }
-  .st-sent {
-    background: #dcfce7;
-    color: #166534;
-  }
-  .st-failed {
-    background: #fee2e2;
-    color: #991b1b;
-  }
-  .st-expired {
-    background: #f3f4f6;
-    color: #4b5563;
-  }
+
   .meta {
     color: var(--c-muted);
     font-size: 0.875rem;
     display: flex;
-    gap: var(--space-2);
+    gap: var(--space-3);
     flex-wrap: wrap;
     align-items: center;
     margin-bottom: var(--space-3);
   }
-  .meta .dot {
-    opacity: 0.5;
-  }
   .code {
-    font-family: 'SF Mono', Menlo, monospace;
+    font-family: var(--font-mono);
     background: var(--c-bg);
     padding: 1px 6px;
     border-radius: 4px;
     color: var(--c-navy);
     font-weight: 600;
   }
+
   .actions {
     display: flex;
     gap: var(--space-2);
     flex-wrap: wrap;
+    align-items: center;
   }
-  .btn {
-    padding: var(--space-2) var(--space-3);
-    border-radius: var(--radius);
+  .confirm-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+    color: var(--c-text);
     font-size: 0.875rem;
-    font-weight: 500;
-    background: var(--c-navy);
-    color: white;
-    text-decoration: none;
-    border: 0;
-    font-family: inherit;
-    cursor: pointer;
-  }
-  .btn.ghost {
-    background: transparent;
-    color: var(--c-navy);
-    border: 1px solid var(--c-border);
-  }
-  .btn.danger {
-    background: transparent;
-    color: var(--c-danger);
-    border: 1px solid var(--c-danger);
-  }
-  .btn.danger:hover {
-    background: #fef2f2;
-  }
-  .btn.danger:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-  .btn:hover {
-    text-decoration: none;
+    background: var(--c-warn-bg);
+    border: 1px solid var(--c-warn-border);
+    padding: 4px 10px;
+    border-radius: var(--radius);
   }
 
   @media (max-width: 640px) {
     .head {
       flex-direction: column;
       align-items: stretch;
-      gap: var(--space-3);
     }
-    .cta {
-      text-align: center;
+    .head .btn {
+      width: 100%;
     }
     .card-head {
       flex-direction: column;
       align-items: flex-start;
     }
     .meta {
+      gap: var(--space-2);
       font-size: 0.8125rem;
     }
     .actions {
       display: grid;
       grid-template-columns: 1fr;
-      gap: var(--space-2);
     }
-    .btn {
-      text-align: center;
-      padding: var(--space-3);
+    .confirm-inline {
+      grid-column: 1 / -1;
+      justify-content: space-between;
     }
   }
 </style>

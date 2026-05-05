@@ -27,15 +27,15 @@
 <div class="auth">
   <h1>Подтверждение email</h1>
   {#if data.code === 'missing'}
-    <p class="error">{data.message}. Откройте ссылку из письма целиком.</p>
+    <div class="alert alert-error">{data.message}. Откройте ссылку из письма целиком.</div>
   {:else if data.code === 'invalid'}
-    <p class="error">Ссылка недействительна. Возможно, она была изменена.</p>
+    <div class="alert alert-error">Ссылка недействительна. Возможно, она была изменена.</div>
   {:else if data.code === 'used'}
-    <p class="error">
+    <div class="alert alert-error">
       Эта ссылка уже была использована. Если у вас не получается войти — запросите новую.
-    </p>
+    </div>
   {:else if data.code === 'expired'}
-    <p class="error">Срок действия ссылки истёк. Запросите новое письмо ниже.</p>
+    <div class="alert alert-error">Срок действия ссылки истёк. Запросите новое письмо ниже.</div>
   {/if}
 
   {#if data.code === 'expired' || data.code === 'used' || data.code === 'invalid'}
@@ -48,6 +48,7 @@
       <label>
         <span>Email, на который пришло письмо</span>
         <input
+          class="input"
           type="email"
           bind:value={resendEmail}
           required
@@ -55,9 +56,9 @@
           maxlength="254"
         />
       </label>
-      <button type="submit" class="primary" disabled={resending || resendDone}>
+      <button type="submit" class="btn btn-primary btn-block" disabled={resending || resendDone}>
         {#if resendDone}
-          Письмо отправлено
+          Отправлено
         {:else if resending}
           Отправляем…
         {:else}
@@ -73,7 +74,7 @@
     </form>
   {/if}
 
-  <p class="muted"><a href="/login">Назад ко входу</a></p>
+  <p class="footer-link"><a href="/login">Назад ко входу</a></p>
 </div>
 
 <style>
@@ -91,6 +92,7 @@
     background: var(--c-surface);
     padding: var(--space-6);
     border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
     margin-top: var(--space-4);
   }
   label {
@@ -101,35 +103,23 @@
   label > span {
     font-weight: 500;
   }
-  input {
-    padding: var(--space-3);
-    border: 1px solid var(--c-border);
-    border-radius: var(--radius);
-    font-family: inherit;
-    font-size: 1rem;
-  }
-  button.primary {
-    background: var(--c-navy);
-    color: white;
-    border: 0;
-    padding: var(--space-3) var(--space-6);
-    border-radius: var(--radius);
-    font-weight: 500;
-    font-family: inherit;
-    font-size: 1rem;
-  }
-  button:disabled {
-    opacity: 0.5;
-  }
-  .error {
-    background: #fef2f2;
-    color: var(--c-danger);
+  .alert {
     padding: var(--space-3);
     border-radius: var(--radius);
-    border: 1px solid #fecaca;
+    border: 1px solid;
     font-size: 0.95rem;
   }
+  .alert-error {
+    background: var(--c-danger-bg);
+    color: var(--c-danger);
+    border-color: var(--c-danger-border);
+  }
   .muted {
+    color: var(--c-muted);
+    font-size: 0.9rem;
+    margin: 0;
+  }
+  .footer-link {
     color: var(--c-muted);
     margin-top: var(--space-4);
     text-align: center;
@@ -141,13 +131,6 @@
     }
     form {
       padding: var(--space-4);
-    }
-    button.primary {
-      width: 100%;
-      padding: var(--space-4);
-    }
-    input {
-      font-size: 16px;
     }
   }
 </style>
