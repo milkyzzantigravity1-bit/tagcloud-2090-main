@@ -19,7 +19,7 @@
       case 'active':
         return { text: 'Активен', cls: 'badge badge-active' };
       case 'sent':
-        return { text: 'Отправлен', cls: 'badge badge-success' };
+        return { text: 'Завершён', cls: 'badge badge-success' };
       case 'failed':
         return {
           text: 'Ошибка отправки',
@@ -88,15 +88,12 @@
 
 <svelte:head><title>Мои опросы — Облако тегов 2090</title></svelte:head>
 
-<div class="head">
-  <h1>Мои опросы</h1>
-  <a class="btn btn-primary" href="/new">+ Создать опрос</a>
-</div>
+<h1>Мои опросы</h1>
 
 {#if data.surveys.length === 0}
   <div class="empty">
     <p>У вас пока нет опросов.</p>
-    <a class="btn btn-primary btn-lg" href="/new">Создать первый</a>
+    <a class="btn btn-primary btn-lg" href="/new">Создать опрос</a>
   </div>
 {:else}
   <ul class="list">
@@ -110,7 +107,9 @@
           <span class={status.cls} title={status.title ?? ''}>{status.text}</span>
         </div>
         <div class="meta">
-          <code class="code">{s.code}</code>
+          {#if s.status === 'active'}
+            <code class="code">{s.code}</code>
+          {/if}
           <span>
             {s.questionsCount}
             {plural(s.questionsCount, ['вопрос', 'вопроса', 'вопросов'])}
@@ -119,14 +118,17 @@
             {s.responsesCount}
             {plural(s.responsesCount, ['ответ', 'ответа', 'ответов'])}
           </span>
-          <span>истекает {fmtDate(s.expiresAt)}</span>
+          <span>
+            {s.status === 'active' ? 'истекает' : 'завершён'}
+            {fmtDate(s.expiresAt)}
+          </span>
         </div>
         <div class="actions">
           <a class="btn btn-primary btn-sm" href={`/s/${s.code}`}>Дашборд</a>
-          <button class="btn btn-ghost btn-sm" onclick={(e) => copyLink(s.code, e)}>
-            {copying === s.code ? 'Скопировано' : 'Копировать ссылку'}
-          </button>
           {#if s.status === 'active'}
+            <button class="btn btn-ghost btn-sm" onclick={(e) => copyLink(s.code, e)}>
+              {copying === s.code ? 'Скопировано' : 'Копировать ссылку'}
+            </button>
             {#if confirmCode === s.code}
               <span class="confirm-inline">
                 Завершить опрос?
@@ -162,15 +164,8 @@
 {/if}
 
 <style>
-  .head {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: var(--space-6);
-    gap: var(--space-3);
-  }
   h1 {
-    margin: 0;
+    margin: 0 0 var(--space-6);
   }
   .empty {
     text-align: center;
@@ -245,13 +240,6 @@
   }
 
   @media (max-width: 640px) {
-    .head {
-      flex-direction: column;
-      align-items: stretch;
-    }
-    .head .btn {
-      width: 100%;
-    }
     .card-head {
       flex-direction: column;
       align-items: flex-start;

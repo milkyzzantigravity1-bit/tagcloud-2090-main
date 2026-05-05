@@ -3,8 +3,6 @@
   let { data }: PageProps = $props();
 
   type Question = { text: string; answerType: 'single' | 'multi'; maxAnswers: number };
-
-  const MAX_PRESETS = [2, 3, 5, 7, 10, 20] as const;
   type CreateResult = {
     code: string;
     url: string;
@@ -26,7 +24,7 @@
   let errorMessage = $state<string | null>(null);
 
   function addQuestion() {
-    if (questions.length < 50) questions.push({ text: '', answerType: 'single', maxAnswers: 5 });
+    questions.push({ text: '', answerType: 'single', maxAnswers: 5 });
   }
 
   function setAnswerType(i: number, t: 'single' | 'multi') {
@@ -93,18 +91,12 @@
   }
 
   let copyDoneCode = $state(false);
-  let copyDoneDash = $state(false);
 
-  async function copy(text: string, which: 'code' | 'dash') {
+  async function copy(text: string) {
     try {
       await navigator.clipboard.writeText(text);
-      if (which === 'code') {
-        copyDoneCode = true;
-        setTimeout(() => (copyDoneCode = false), 1500);
-      } else {
-        copyDoneDash = true;
-        setTimeout(() => (copyDoneDash = false), 1500);
-      }
+      copyDoneCode = true;
+      setTimeout(() => (copyDoneCode = false), 1500);
     } catch {}
   }
 </script>
@@ -113,36 +105,22 @@
 
 {#if result}
   <h1>Опрос создан</h1>
-  <p class="muted">Сохраните ссылку на дашборд — это единственный способ его открыть.</p>
 
   <section class="card share">
     <div class="share-info">
       <h2 class="share-h">Код опроса</h2>
       <div class="big-code">{result.code}</div>
 
-      <h2 class="share-h">Ссылка для респондентов</h2>
+      <h2 class="share-h">Ссылка на опрос</h2>
       <div class="link-row">
         <code>{result.url}</code>
-        <button class="btn btn-ghost btn-sm" onclick={() => copy(result!.url, 'code')}>
+        <button class="btn btn-ghost btn-sm" onclick={() => copy(result!.url)}>
           {copyDoneCode ? 'Скопировано' : 'Копировать'}
         </button>
       </div>
     </div>
     <img class="qr" src={result.qrPngBase64} alt="QR код" />
   </section>
-
-  <section class="card">
-    <h2 class="share-h">Ссылка на дашборд (только для вас)</h2>
-    <div class="link-row">
-      <code>{result.dashboardUrl}</code>
-      <button class="btn btn-ghost btn-sm" onclick={() => copy(result!.dashboardUrl, 'dash')}>
-        {copyDoneDash ? 'Скопировано' : 'Копировать'}
-      </button>
-    </div>
-    <a class="btn btn-primary" href={result.dashboardUrl}>Открыть дашборд →</a>
-  </section>
-
-  <button class="btn btn-ghost" onclick={() => (result = null)}>Создать ещё один опрос</button>
 {:else}
   <h1>Создать опрос</h1>
   <p class="muted">Результаты придут на <strong>{data.email}</strong> по истечении срока.</p>
@@ -234,7 +212,7 @@
     </fieldset>
 
     <fieldset>
-      <legend>Вопросы ({questions.length}/50)</legend>
+      <legend>Вопросы ({questions.length})</legend>
       {#each questions as _, i (i)}
         <div class="question">
           <div class="q-head">
@@ -271,34 +249,23 @@
             {/each}
           </div>
           {#if questions[i].answerType === 'multi'}
-            <div class="max-answers">
+            <label class="max-answers">
               <span class="max-answers-label">Максимум ответов</span>
-              <div class="segmented" role="radiogroup" aria-label="Максимум ответов">
-                {#each MAX_PRESETS as n (n)}
-                  <button
-                    type="button"
-                    class="seg seg-sm"
-                    class:active={questions[i].maxAnswers === n}
-                    role="radio"
-                    aria-checked={questions[i].maxAnswers === n}
-                    onclick={() => (questions[i].maxAnswers = n)}
-                  >
-                    {n}
-                  </button>
-                {/each}
-              </div>
-            </div>
+              <input
+                class="input max-answers-input"
+                type="number"
+                min="1"
+                max="200"
+                step="1"
+                inputmode="numeric"
+                bind:value={questions[i].maxAnswers}
+                required
+              />
+            </label>
           {/if}
         </div>
       {/each}
-      <button
-        type="button"
-        class="btn btn-ghost"
-        onclick={addQuestion}
-        disabled={questions.length >= 50}
-      >
-        + Добавить вопрос
-      </button>
+      <button type="button" class="btn btn-ghost" onclick={addQuestion}> + Добавить вопрос </button>
     </fieldset>
 
     <details class="advanced">
@@ -451,8 +418,8 @@
   }
   .max-answers {
     display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
+    align-items: center;
+    gap: var(--space-3);
     padding-top: var(--space-2);
     border-top: 1px dashed var(--c-border);
   }
@@ -460,6 +427,10 @@
     font-size: 0.8125rem;
     font-weight: 500;
     color: var(--c-muted);
+  }
+  .max-answers-input {
+    width: 88px;
+    text-align: center;
   }
   .q-head strong {
     font-weight: 500;
@@ -512,8 +483,8 @@
     align-self: flex-start;
   }
   .qr {
-    width: 180px;
-    height: 180px;
+    width: 280px;
+    height: 280px;
     image-rendering: pixelated;
     border: 1px solid var(--c-border);
     border-radius: var(--radius);
@@ -572,8 +543,8 @@
       width: 100%;
     }
     .qr {
-      width: 200px;
-      height: 200px;
+      width: 240px;
+      height: 240px;
     }
   }
 </style>

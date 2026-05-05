@@ -74,12 +74,10 @@ export function resultsHtml(opts: ResultsTemplateInput): string {
           <td style="vertical-align:middle;">
             <div style="font-weight:600;color:${NAVY};font-size:12px;letter-spacing:0.06em;text-transform:uppercase;">Облако тегов · Школа №2090</div>
             <h1 style="font-size:22px;margin:4px 0 0;color:${NAVY};font-weight:600;line-height:1.3;">${escapeHtml(opts.surveyTitle)}</h1>
-            <div style="color:${MUTED};font-size:13px;margin-top:4px;">Код: <code style="font-family:'SF Mono',Menlo,monospace;color:${NAVY};font-weight:600;letter-spacing:0.05em;">${opts.surveyCode}</code></div>
           </td>
         </tr>
       </table>
-      <p style="margin:24px 0 4px;line-height:1.5;">Опрос завершён. Результаты ниже, полные данные — в файле <strong>results-${opts.surveyCode}.csv</strong>.</p>
-      <table width="100%" style="border-collapse:collapse;">${items}</table>
+      <table width="100%" style="border-collapse:collapse;margin-top:16px;">${items}</table>
       <p style="color:${MUTED};font-size:12px;margin-top:32px;border-top:1px solid ${BORDER};padding-top:16px;line-height:1.5;">
         Автоматическое сообщение от сервиса опросов ГБОУ Школа №2090.<br>
         Не отвечайте на это письмо.
@@ -90,7 +88,7 @@ export function resultsHtml(opts: ResultsTemplateInput): string {
 }
 
 export function resultsText(opts: ResultsTemplateInput): string {
-  const lines: string[] = [`Результаты опроса: ${opts.surveyTitle}`, `Код: ${opts.surveyCode}`, ''];
+  const lines: string[] = [`Результаты опроса: ${opts.surveyTitle}`, ''];
   opts.questions.forEach((q, i) => {
     lines.push(`Вопрос ${i + 1}: ${q.question.text}`);
     lines.push(`  Голосов: ${q.totalVotes}`);

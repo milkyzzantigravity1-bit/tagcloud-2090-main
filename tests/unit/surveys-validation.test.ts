@@ -75,8 +75,8 @@ describe('CreateSurveySchema', () => {
     expect(r.success).toBe(false);
   });
 
-  it('ругается на >50 вопросов', () => {
-    const questions = Array.from({ length: 51 }, () => ({
+  it('ругается на >500 вопросов', () => {
+    const questions = Array.from({ length: 501 }, () => ({
       text: 'Q?',
       answerType: 'single' as const
     }));
@@ -84,6 +84,37 @@ describe('CreateSurveySchema', () => {
       colorScheme: 'mono',
       expiresAt: future(2 * HOUR_MS),
       questions
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it('принимает 100 вопросов (раньше было >50 — лимит снят)', () => {
+    const questions = Array.from({ length: 100 }, () => ({
+      text: 'Q?',
+      answerType: 'single' as const
+    }));
+    const r = CreateSurveySchema.safeParse({
+      colorScheme: 'mono',
+      expiresAt: future(2 * HOUR_MS),
+      questions
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it('принимает multi-вопрос с maxAnswers=200', () => {
+    const r = CreateSurveySchema.safeParse({
+      colorScheme: 'mono',
+      expiresAt: future(2 * HOUR_MS),
+      questions: [{ text: 'Q?', answerType: 'multi' as const, maxAnswers: 200 }]
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it('ругается на multi-вопрос с maxAnswers=201', () => {
+    const r = CreateSurveySchema.safeParse({
+      colorScheme: 'mono',
+      expiresAt: future(2 * HOUR_MS),
+      questions: [{ text: 'Q?', answerType: 'multi' as const, maxAnswers: 201 }]
     });
     expect(r.success).toBe(false);
   });
