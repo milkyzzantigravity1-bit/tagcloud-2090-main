@@ -19,10 +19,6 @@
     untrack(() => ({ ...(data.initialWords ?? {}) }))
   );
   let activeIdx = $state(0);
-  // 'idle' — опрос завершён, WS не нужен; остальные — состояния live-канала.
-  let wsState = $state<'connecting' | 'open' | 'closed' | 'idle'>(
-    untrack(() => (isActive ? 'connecting' : 'idle'))
-  );
   let totalVotes = $derived(
     Object.values(words).reduce((s, w) => s + w.reduce((a, [, c]) => a + c, 0), 0)
   );
@@ -40,11 +36,7 @@
     if (!isActive) return;
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
     const url = `${proto}://${location.host}/ws/${survey.code}?t=${encodeURIComponent(creatorToken)}`;
-    wsState = 'connecting';
     ws = new WebSocket(url);
-    ws.onopen = () => {
-      wsState = 'open';
-    };
     ws.onmessage = (ev) => {
       try {
         const msg = JSON.parse(ev.data) as ServerMsg;
@@ -60,7 +52,6 @@
       }
     };
     ws.onclose = () => {
-      wsState = 'closed';
       if (stopReconnect) return;
       if (reconnectTimer) clearTimeout(reconnectTimer);
       reconnectTimer = setTimeout(connect, 3000);
@@ -194,7 +185,7 @@
       case 'active':
         return { text: 'Активен', cls: 'badge badge-active' };
       case 'sent':
-        return { text: 'Отправлен', cls: 'badge badge-success' };
+        return { text: 'Завершён', cls: 'badge badge-success' };
       case 'failed':
         return { text: 'Ошибка отправки', cls: 'badge badge-danger' };
       case 'expired':
@@ -216,24 +207,13 @@
       <span class={status.cls}>{status.text}</span>
     </div>
     <p class="muted">
-      Истекает {fmtDate(survey.expiresAt)} · {totalVotes}
+      {isActive ? 'Истекает' : 'Завершён'}
+      {fmtDate(survey.expiresAt)} · {totalVotes}
       {totalVotes === 1 ? 'голос' : totalVotes >= 2 && totalVotes <= 4 ? 'голоса' : 'голосов'}
     </p>
   </div>
   <div class="title-actions">
     {#if isActive}
-      <span class="ws-state ws-{wsState}" title="Соединение с сервером">
-        {#if wsState === 'open'}
-          <span class="ws-dot ws-dot-live"></span>
-          live
-        {:else if wsState === 'connecting'}
-          <span class="ws-dot"></span>
-          подключение
-        {:else}
-          <span class="ws-dot ws-dot-off"></span>
-          переподключение
-        {/if}
-      </span>
       {#if !confirmFinish}
         <button class="btn btn-danger btn-sm" onclick={() => (confirmFinish = true)}>
           Завершить
@@ -296,29 +276,31 @@
   </div>
 {/if}
 
-<section class="card share">
-  <div class="share-info">
-    <div class="share-block">
-      <h2 class="share-h">Код опроса</h2>
-      <div class="big-code-row">
-        <span class="big-code">{survey.code}</span>
-        <button class="btn btn-ghost btn-sm" onclick={copyCode}>
-          {copyDoneCode ? 'Скопировано' : 'Копировать'}
-        </button>
+{#if isActive}
+  <section class="card share">
+    <div class="share-info">
+      <div class="share-block">
+        <h2 class="share-h">Код опроса</h2>
+        <div class="big-code-row">
+          <span class="big-code">{survey.code}</span>
+          <button class="btn btn-ghost btn-sm" onclick={copyCode}>
+            {copyDoneCode ? 'Скопировано' : 'Копировать'}
+          </button>
+        </div>
+      </div>
+      <div class="share-block">
+        <h2 class="share-h">Ссылка на опрос</h2>
+        <div class="link-row">
+          <code>{respondentUrl}</code>
+          <button class="btn btn-ghost btn-sm" onclick={copyLink}>
+            {copyDoneLink ? 'Скопировано' : 'Копировать'}
+          </button>
+        </div>
       </div>
     </div>
-    <div class="share-block">
-      <h2 class="share-h">Ссылка для респондентов</h2>
-      <div class="link-row">
-        <code>{respondentUrl}</code>
-        <button class="btn btn-ghost btn-sm" onclick={copyLink}>
-          {copyDoneLink ? 'Скопировано' : 'Копировать'}
-        </button>
-      </div>
-    </div>
-  </div>
-  <img class="qr" src={qrPngBase64Data} alt="QR код опроса" />
-</section>
+    <img class="qr" src={qrPngBase64Data} alt="QR код опроса" />
+  </section>
+{/if}
 
 <section class="card cloud-card">
   <div class="cloud-head">
@@ -395,49 +377,6 @@
     align-items: center;
     gap: var(--space-2);
     flex-wrap: wrap;
-  }
-
-  /* ─── WS-индикатор ──────────────────── */
-  .ws-state {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.8125rem;
-    padding: 4px 10px;
-    border-radius: 999px;
-    background: var(--c-bg);
-    border: 1px solid var(--c-border);
-    color: var(--c-muted);
-    white-space: nowrap;
-  }
-  .ws-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--c-muted);
-  }
-  .ws-dot-live {
-    background: var(--c-success);
-    box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.45);
-    animation: pulse 1.6s ease-in-out infinite;
-  }
-  .ws-dot-off {
-    background: var(--c-danger);
-  }
-  .ws-open {
-    color: var(--c-success);
-  }
-  .ws-closed {
-    color: var(--c-danger);
-  }
-  @keyframes pulse {
-    0%,
-    100% {
-      box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.45);
-    }
-    50% {
-      box-shadow: 0 0 0 5px rgba(22, 163, 74, 0);
-    }
   }
 
   /* ─── Алерты ──────────────────── */
@@ -537,8 +476,8 @@
     word-break: break-all;
   }
   .qr {
-    width: 180px;
-    height: 180px;
+    width: 280px;
+    height: 280px;
     image-rendering: pixelated;
     border: 1px solid var(--c-border);
     border-radius: var(--radius);
@@ -638,8 +577,8 @@
       width: 100%;
     }
     .qr {
-      width: 200px;
-      height: 200px;
+      width: 240px;
+      height: 240px;
     }
     .big-code {
       font-size: 1.875rem;

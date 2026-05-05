@@ -19,8 +19,8 @@ describe('AnswerEntrySchema', () => {
     expect(AnswerEntrySchema.safeParse({ questionId: UUID, words: [] }).success).toBe(false);
   });
 
-  it('ругается на >50 слов (жёсткий потолок схемы)', () => {
-    const words = Array.from({ length: 51 }, (_, i) => `w${i}`);
+  it('ругается на >200 слов (жёсткий потолок схемы)', () => {
+    const words = Array.from({ length: 201 }, (_, i) => `w${i}`);
     expect(AnswerEntrySchema.safeParse({ questionId: UUID, words }).success).toBe(false);
   });
 
@@ -42,8 +42,8 @@ describe('SubmitAnswersSchema', () => {
     expect(SubmitAnswersSchema.safeParse({ answers: [] }).success).toBe(false);
   });
 
-  it('лимитирует количество ответов в одном запросе (≤50)', () => {
-    const answers = Array.from({ length: 51 }, () => ({ questionId: UUID, words: ['x'] }));
+  it('лимитирует количество ответов в одном запросе (≤500)', () => {
+    const answers = Array.from({ length: 501 }, () => ({ questionId: UUID, words: ['x'] }));
     expect(SubmitAnswersSchema.safeParse({ answers }).success).toBe(false);
   });
 });

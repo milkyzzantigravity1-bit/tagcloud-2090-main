@@ -1,6 +1,5 @@
 <script lang="ts">
-  import type { PageProps } from './$types';
-  let { data }: PageProps = $props();
+  // Главная только для гостей: залогиненных редиректит на /my (см. +page.server.ts).
 </script>
 
 <svelte:head>
@@ -14,37 +13,15 @@
     результаты собираются в живое облако тегов.
   </p>
 
-  {#if data.user}
-    <div class="cta-row">
-      <a class="btn btn-primary btn-lg" href="/my">Мои опросы →</a>
-      <a class="btn btn-ghost btn-lg" href="/new">Создать новый</a>
-    </div>
-  {:else}
-    <div class="cta-row">
-      <a class="btn btn-primary btn-lg" href="/register">Создать аккаунт →</a>
-      <a class="btn btn-ghost btn-lg" href="/login">Войти</a>
-    </div>
-  {/if}
-</section>
-
-<section class="how">
-  <h2>Как это работает</h2>
-  <ol>
-    <li>
-      <strong>Создайте опрос.</strong> Один или несколько вопросов, срок действия от часа до недели.
-    </li>
-    <li>
-      <strong>Поделитесь ссылкой или QR-кодом.</strong> Респонденты отвечают анонимно, без регистрации.
-    </li>
-    <li>
-      <strong>Получите результаты на email.</strong> Изображения облаков и таблица CSV придут автоматически.
-    </li>
-  </ol>
+  <div class="cta-row">
+    <a class="btn btn-primary btn-lg" href="/join">Пройти опрос</a>
+    <a class="btn btn-ghost btn-lg" href="/login">Войти</a>
+  </div>
 </section>
 
 <style>
   .hero {
-    padding: var(--space-8) 0 var(--space-12);
+    padding: var(--space-12) 0;
   }
   h1 {
     font-size: 2.25rem;
@@ -62,58 +39,6 @@
     gap: var(--space-3);
     flex-wrap: wrap;
   }
-
-  .how {
-    border-top: 1px solid var(--c-border);
-    padding-top: var(--space-8);
-  }
-  .how h2 {
-    font-size: 1rem;
-    color: var(--c-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    font-weight: 600;
-    margin-bottom: var(--space-4);
-  }
-  .how ol {
-    list-style: none;
-    counter-reset: step;
-    padding: 0;
-    margin: 0;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: var(--space-6);
-  }
-  .how li {
-    counter-increment: step;
-    color: var(--c-muted);
-    font-size: 0.9375rem;
-    line-height: 1.5;
-    padding-left: var(--space-8);
-    position: relative;
-    min-height: 32px;
-  }
-  .how li::before {
-    content: counter(step);
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    background: var(--c-surface);
-    color: var(--c-navy);
-    font-weight: 600;
-    font-size: 0.875rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .how li strong {
-    color: var(--c-text);
-    font-weight: 500;
-  }
-
   @media (max-width: 480px) {
     h1 {
       font-size: 1.75rem;

@@ -8,12 +8,17 @@ export const QuestionInputSchema = z
   .object({
     text: z.string().trim().min(1, 'Текст вопроса обязателен').max(500),
     answerType: z.enum(['single', 'multi']),
-    maxAnswers: z.number().int().min(1, 'Минимум 1 ответ').max(50, 'Максимум 50 ответов').optional()
+    maxAnswers: z
+      .number()
+      .int()
+      .min(1, 'Минимум 1 ответ')
+      .max(200, 'Максимум 200 ответов')
+      .optional()
   })
   .transform((q) => ({
     ...q,
-    // single = всегда 1 ответ; multi с пропущенным maxAnswers = старый дефолт (20).
-    maxAnswers: q.answerType === 'single' ? 1 : (q.maxAnswers ?? 20)
+    // single = всегда 1 ответ; multi без явного maxAnswers — дефолт для старых клиентов.
+    maxAnswers: q.answerType === 'single' ? 1 : (q.maxAnswers ?? 5)
   }));
 
 export const CreateSurveySchema = z
@@ -30,7 +35,7 @@ export const CreateSurveySchema = z
     questions: z
       .array(QuestionInputSchema)
       .min(1, 'Нужен хотя бы один вопрос')
-      .max(50, 'Не больше 50 вопросов')
+      .max(500, 'Не больше 500 вопросов')
   })
   .refine((d) => d.colorScheme !== 'custom' || (d.customPalette && d.customPalette.length > 0), {
     message: 'customPalette обязательна при colorScheme=custom',
