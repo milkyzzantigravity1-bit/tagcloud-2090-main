@@ -1,17 +1,30 @@
 :root {
   --c-navy: #0e2a5c;
+  --c-navy-hover: #0a1f47;
   --c-blue: #2d9fda;
   --c-gold: #e0b73a;
   --c-bg: #ffffff;
   --c-surface: #f7f8fa;
+  --c-surface-hover: #eef0f4;
   --c-text: #1a1a1a;
   --c-muted: #6b7280;
   --c-border: #e5e7eb;
   --c-danger: #dc2626;
+  --c-danger-bg: #fef2f2;
+  --c-danger-border: #fecaca;
+  --c-success: #16a34a;
+  --c-success-bg: #dcfce7;
+  --c-success-fg: #166534;
+  --c-warn: #d97706;
+  --c-warn-bg: #fffbeb;
+  --c-warn-border: #fde68a;
+  --c-warn-fg: #92400e;
+  --c-focus: rgba(45, 159, 218, 0.4);
 
   --font-sans:
     'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
     sans-serif;
+  --font-mono: 'SF Mono', Menlo, monospace;
 
   --radius: 8px;
   --radius-lg: 12px;
@@ -69,7 +82,7 @@ button {
 }
 
 code {
-  font-family: 'SF Mono', Menlo, monospace;
+  font-family: var(--font-mono);
   background: var(--c-surface);
   padding: 2px 6px;
   border-radius: 4px;
@@ -77,7 +90,161 @@ code {
   word-break: break-all;
 }
 
-/* mobile breakpoints (используются в +layout.svelte и page-стилях) */
+/* единое focus-кольцо для интерактивных элементов */
+:focus-visible {
+  outline: 2px solid var(--c-blue);
+  outline-offset: 2px;
+}
+button:focus-visible,
+.btn:focus-visible,
+a:focus-visible {
+  outline-offset: 3px;
+  border-radius: var(--radius);
+}
+
+/* ─── Базовые кнопки ─────────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  font-family: inherit;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.2;
+  padding: 10px 16px;
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
+}
+.btn:hover {
+  text-decoration: none;
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--c-navy);
+  color: #fff;
+  border-color: var(--c-navy);
+}
+.btn-primary:hover:not(:disabled) {
+  background: var(--c-navy-hover);
+  border-color: var(--c-navy-hover);
+  color: #fff;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--c-navy);
+  border-color: var(--c-border);
+}
+.btn-ghost:hover:not(:disabled) {
+  background: var(--c-surface);
+  color: var(--c-navy);
+}
+
+.btn-danger {
+  background: transparent;
+  color: var(--c-danger);
+  border-color: var(--c-danger);
+}
+.btn-danger:hover:not(:disabled) {
+  background: var(--c-danger-bg);
+  color: var(--c-danger);
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 0.8125rem;
+}
+.btn-lg {
+  padding: 14px 24px;
+  font-size: 1rem;
+}
+.btn-block {
+  width: 100%;
+}
+
+/* ─── Поля ввода ─────────────────────────────────────────────────────────── */
+.input {
+  font-family: inherit;
+  font-size: 1rem;
+  padding: var(--space-3);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  background: var(--c-bg);
+  color: var(--c-text);
+  width: 100%;
+  /* предотвращает auto-zoom на iOS Safari (font-size <16px вызывает zoom) */
+  -webkit-appearance: none;
+  appearance: none;
+}
+.input:focus {
+  border-color: var(--c-blue);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--c-focus);
+}
+@supports (-webkit-touch-callout: none) {
+  .input {
+    font-size: 16px;
+  }
+}
+
+/* ─── Карточки ───────────────────────────────────────────────────────────── */
+.card {
+  background: var(--c-surface);
+  padding: var(--space-6);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ─── Бейджи статусов ────────────────────────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.badge::before {
+  content: '';
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.badge-active {
+  background: #dbeafe;
+  color: #1e3a8a;
+}
+.badge-success {
+  background: var(--c-success-bg);
+  color: var(--c-success-fg);
+}
+.badge-danger {
+  background: var(--c-danger-bg);
+  color: #991b1b;
+}
+.badge-muted {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+/* ─── Mobile ─────────────────────────────────────────────────────────────── */
 @media (max-width: 480px) {
   html,
   body {

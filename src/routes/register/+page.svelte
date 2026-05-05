@@ -5,6 +5,7 @@
   let errorMessage = $state<string | null>(null);
   let pending = $state<{ email: string; ttlHours: number; status: string } | null>(null);
   let resending = $state(false);
+  let resendDone = $state(false);
 
   async function submit() {
     submitting = true;
@@ -38,6 +39,7 @@
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ email: pending.email })
       });
+      resendDone = true;
     } finally {
       resending = false;
     }
@@ -54,19 +56,28 @@
       нажмите кнопку, чтобы войти.
     </p>
     <p class="muted">
-      Срок действия ссылки — {pending.ttlHours} ч. Если письмо не пришло, проверьте папку «Спам» или нажмите
-      кнопку ниже.
+      Ссылка действует {pending.ttlHours} ч. Не пришло — проверьте «Спам» или нажмите ниже.
     </p>
     {#if pending.status === 'claim_pending'}
       <p class="muted">
-        После подтверждения email в разделе «Мои опросы» появятся опросы, ранее созданные с этим
-        адресом.
+        После подтверждения в разделе «Мои опросы» появятся опросы, ранее созданные с этим адресом.
       </p>
     {/if}
-    <button type="button" class="primary" onclick={resend} disabled={resending}>
-      {resending ? 'Отправляем…' : 'Отправить письмо ещё раз'}
+    <button
+      type="button"
+      class="btn btn-primary btn-block"
+      onclick={resend}
+      disabled={resending || resendDone}
+    >
+      {#if resendDone}
+        Отправлено
+      {:else if resending}
+        Отправляем…
+      {:else}
+        Отправить письмо ещё раз
+      {/if}
     </button>
-    <p class="muted"><a href="/login">Назад ко входу</a></p>
+    <p class="footer-link"><a href="/login">Назад ко входу</a></p>
   {:else}
     <h1>Регистрация</h1>
     <p class="muted">После регистрации мы пришлём письмо со ссылкой для подтверждения email.</p>
@@ -78,11 +89,19 @@
     >
       <label>
         <span>Email</span>
-        <input type="email" bind:value={email} required autocomplete="email" maxlength="254" />
+        <input
+          class="input"
+          type="email"
+          bind:value={email}
+          required
+          autocomplete="email"
+          maxlength="254"
+        />
       </label>
       <label>
         <span>Пароль (минимум 8 символов)</span>
         <input
+          class="input"
           type="password"
           bind:value={password}
           required
@@ -92,13 +111,13 @@
         />
       </label>
       {#if errorMessage}
-        <div class="error">{errorMessage}</div>
+        <div class="alert alert-error">{errorMessage}</div>
       {/if}
-      <button type="submit" class="primary" disabled={submitting}>
+      <button type="submit" class="btn btn-primary btn-block" disabled={submitting}>
         {submitting ? 'Создаём…' : 'Создать аккаунт'}
       </button>
     </form>
-    <p class="muted">Уже есть аккаунт? <a href="/login">Войти</a></p>
+    <p class="footer-link">Уже есть аккаунт? <a href="/login">Войти</a></p>
   {/if}
 </div>
 
@@ -117,6 +136,7 @@
     background: var(--c-surface);
     padding: var(--space-6);
     border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
     margin-top: var(--space-6);
   }
   label {
@@ -127,40 +147,24 @@
   label > span {
     font-weight: 500;
   }
-  input {
-    padding: var(--space-3);
-    border: 1px solid var(--c-border);
-    border-radius: var(--radius);
-    font-family: inherit;
-    font-size: 1rem;
-  }
-  button.primary {
-    background: var(--c-navy);
-    color: white;
-    border: 0;
-    padding: var(--space-3) var(--space-6);
-    border-radius: var(--radius);
-    font-weight: 500;
-    font-family: inherit;
-    font-size: 1rem;
-    margin-top: var(--space-4);
-  }
-  button:disabled {
-    opacity: 0.5;
-  }
-  .error {
-    background: #fef2f2;
-    color: var(--c-danger);
+  .alert {
     padding: var(--space-3);
     border-radius: var(--radius);
-    border: 1px solid #fecaca;
+    border: 1px solid;
     font-size: 0.9rem;
+  }
+  .alert-error {
+    background: var(--c-danger-bg);
+    color: var(--c-danger);
+    border-color: var(--c-danger-border);
   }
   .muted {
     color: var(--c-muted);
-    margin-top: var(--space-4);
+    margin-top: var(--space-3);
   }
-  .muted:last-of-type {
+  .footer-link {
+    color: var(--c-muted);
+    margin-top: var(--space-4);
     text-align: center;
   }
 
@@ -170,13 +174,6 @@
     }
     form {
       padding: var(--space-4);
-    }
-    button.primary {
-      width: 100%;
-      padding: var(--space-4);
-    }
-    input {
-      font-size: 16px;
     }
   }
 </style>

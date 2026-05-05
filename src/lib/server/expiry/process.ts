@@ -5,6 +5,7 @@ import { aggregateQuestion } from '../cloud/aggregate';
 import { renderPng } from '../cloud/render-png';
 import { buildSurveyCsv } from '../export/csv';
 import { sendResultsEmail, type EmailAttachment } from '../email/send';
+import { getLogoPng } from '../email/logo';
 import { notifyClosed } from '../realtime/broadcast';
 import { redis } from '../redis';
 import { log } from '../log';
@@ -45,13 +46,27 @@ export async function processExpired(survey: Survey): Promise<void> {
     );
 
     const attachments: EmailAttachment[] = [];
+
+    const logo = await getLogoPng();
+    if (logo) {
+      attachments.push({
+        filename: 'logo.png',
+        content: logo,
+        contentType: 'image/png',
+        cid: 'logo'
+      });
+    }
+
     for (let i = 0; i < aggregated.length; i++) {
       const a = aggregated[i];
+      // Inline-облака пропускаем для пустых вопросов — нечего показывать.
+      if (a.totalVotes === 0) continue;
       const png = await renderPng(a.topWords, survey.colorScheme, survey.customPalette);
       attachments.push({
         filename: `cloud_q${i + 1}.png`,
         content: png,
-        contentType: 'image/png'
+        contentType: 'image/png',
+        cid: `cloud_q${i + 1}`
       });
     }
 

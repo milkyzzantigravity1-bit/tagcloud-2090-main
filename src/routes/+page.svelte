@@ -16,36 +16,30 @@
 
   {#if data.user}
     <div class="cta-row">
-      <a class="cta primary" href="/my">Мои опросы →</a>
-      <a class="cta ghost" href="/new">Создать новый</a>
+      <a class="btn btn-primary btn-lg" href="/my">Мои опросы →</a>
+      <a class="btn btn-ghost btn-lg" href="/new">Создать новый</a>
     </div>
   {:else}
     <div class="cta-row">
-      <a class="cta primary" href="/register">Создать аккаунт →</a>
-      <a class="cta ghost" href="/login">Войти</a>
+      <a class="btn btn-primary btn-lg" href="/register">Создать аккаунт →</a>
+      <a class="btn btn-ghost btn-lg" href="/login">Войти</a>
     </div>
-    <p class="hint">
-      Регистрация — только для создателей опросов. Респонденты заходят анонимно по ссылке или QR.
-    </p>
   {/if}
 </section>
 
-<section class="features">
-  <div class="feature">
-    <div class="ico">🎓</div>
-    <h2>Без регистрации респондентов</h2>
-    <p>Достаточно открыть ссылку или отсканировать QR-код. IP не сохраняется.</p>
-  </div>
-  <div class="feature">
-    <div class="ico">📊</div>
-    <h2>Облако в реальном времени</h2>
-    <p>Каждый ответ моментально видно на дашборде создателя.</p>
-  </div>
-  <div class="feature">
-    <div class="ico">📩</div>
-    <h2>Результаты по email</h2>
-    <p>По истечении срока опроса картинка облака и CSV-таблица придут на твою почту.</p>
-  </div>
+<section class="how">
+  <h2>Как это работает</h2>
+  <ol>
+    <li>
+      <strong>Создайте опрос.</strong> Один или несколько вопросов, срок действия от часа до недели.
+    </li>
+    <li>
+      <strong>Поделитесь ссылкой или QR-кодом.</strong> Респонденты отвечают анонимно, без регистрации.
+    </li>
+    <li>
+      <strong>Получите результаты на email.</strong> Изображения облаков и таблица CSV придут автоматически.
+    </li>
+  </ol>
 </section>
 
 <style>
@@ -63,59 +57,61 @@
     line-height: 1.6;
     margin: 0 0 var(--space-6);
   }
-  .hint {
-    color: var(--c-muted);
-    font-size: 0.875rem;
-    margin: var(--space-3) 0 0;
-  }
   .cta-row {
     display: flex;
     gap: var(--space-3);
     flex-wrap: wrap;
   }
-  .cta {
-    display: inline-block;
-    padding: var(--space-3) var(--space-6);
-    border-radius: var(--radius);
-    text-decoration: none;
-    font-weight: 500;
-  }
-  .cta.primary {
-    background: var(--c-navy);
-    color: white;
-  }
-  .cta.ghost {
-    background: transparent;
-    color: var(--c-navy);
-    border: 1px solid var(--c-border);
-  }
 
-  .features {
+  .how {
+    border-top: 1px solid var(--c-border);
+    padding-top: var(--space-8);
+  }
+  .how h2 {
+    font-size: 1rem;
+    color: var(--c-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+    margin-bottom: var(--space-4);
+  }
+  .how ol {
+    list-style: none;
+    counter-reset: step;
+    padding: 0;
+    margin: 0;
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: var(--space-6);
-    margin-top: var(--space-8);
   }
-  .feature {
-    background: var(--c-surface);
-    padding: var(--space-6);
-    border-radius: var(--radius-lg);
-  }
-  .feature .ico {
-    font-size: 1.6rem;
-    margin-bottom: var(--space-3);
-  }
-  .feature h2 {
-    font-size: 1rem;
-    color: var(--c-navy);
-    margin: 0 0 var(--space-2);
-    font-weight: 600;
-  }
-  .feature p {
-    margin: 0;
+  .how li {
+    counter-increment: step;
     color: var(--c-muted);
     font-size: 0.9375rem;
     line-height: 1.5;
+    padding-left: var(--space-8);
+    position: relative;
+    min-height: 32px;
+  }
+  .how li::before {
+    content: counter(step);
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--c-surface);
+    color: var(--c-navy);
+    font-weight: 600;
+    font-size: 0.875rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .how li strong {
+    color: var(--c-text);
+    font-weight: 500;
   }
 
   @media (max-width: 480px) {
@@ -125,9 +121,8 @@
     .lead {
       font-size: 1rem;
     }
-    .cta-row .cta {
+    .cta-row .btn {
       width: 100%;
-      text-align: center;
     }
   }
 </style>

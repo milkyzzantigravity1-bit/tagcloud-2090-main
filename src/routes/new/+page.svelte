@@ -77,8 +77,20 @@
     }
   }
 
-  async function copy(text: string) {
-    await navigator.clipboard.writeText(text);
+  let copyDoneCode = $state(false);
+  let copyDoneDash = $state(false);
+
+  async function copy(text: string, which: 'code' | 'dash') {
+    try {
+      await navigator.clipboard.writeText(text);
+      if (which === 'code') {
+        copyDoneCode = true;
+        setTimeout(() => (copyDoneCode = false), 1500);
+      } else {
+        copyDoneDash = true;
+        setTimeout(() => (copyDoneDash = false), 1500);
+      }
+    } catch {}
   }
 </script>
 
@@ -86,32 +98,36 @@
 
 {#if result}
   <h1>Опрос создан</h1>
-  <p class="muted">Сохрани ссылку на дашборд — это единственный способ его открыть.</p>
+  <p class="muted">Сохраните ссылку на дашборд — это единственный способ его открыть.</p>
 
-  <section class="card">
-    <h2>Код комнаты</h2>
-    <div class="big-code">{result.code}</div>
-  </section>
+  <section class="card share">
+    <div class="share-info">
+      <h2 class="share-h">Код опроса</h2>
+      <div class="big-code">{result.code}</div>
 
-  <section class="card">
-    <h2>Ссылка для респондентов</h2>
-    <div class="link-row">
-      <code>{result.url}</code>
-      <button class="ghost" onclick={() => copy(result!.url)}>Копировать</button>
+      <h2 class="share-h">Ссылка для респондентов</h2>
+      <div class="link-row">
+        <code>{result.url}</code>
+        <button class="btn btn-ghost btn-sm" onclick={() => copy(result!.url, 'code')}>
+          {copyDoneCode ? 'Скопировано' : 'Копировать'}
+        </button>
+      </div>
     </div>
     <img class="qr" src={result.qrPngBase64} alt="QR код" />
   </section>
 
   <section class="card">
-    <h2>Ссылка на дашборд (только для тебя)</h2>
+    <h2 class="share-h">Ссылка на дашборд (только для вас)</h2>
     <div class="link-row">
-      <code class="small">{result.dashboardUrl}</code>
-      <button class="ghost" onclick={() => copy(result!.dashboardUrl)}>Копировать</button>
+      <code>{result.dashboardUrl}</code>
+      <button class="btn btn-ghost btn-sm" onclick={() => copy(result!.dashboardUrl, 'dash')}>
+        {copyDoneDash ? 'Скопировано' : 'Копировать'}
+      </button>
     </div>
-    <a class="primary" href={result.dashboardUrl}>Открыть дашборд →</a>
+    <a class="btn btn-primary" href={result.dashboardUrl}>Открыть дашборд →</a>
   </section>
 
-  <button class="ghost" onclick={() => (result = null)}>Создать ещё один опрос</button>
+  <button class="btn btn-ghost" onclick={() => (result = null)}>Создать ещё один опрос</button>
 {:else}
   <h1>Создать опрос</h1>
   <p class="muted">Результаты придут на <strong>{data.email}</strong> по истечении срока.</p>
@@ -124,70 +140,80 @@
   >
     <label>
       <span>Название (необязательно)</span>
-      <input type="text" bind:value={title} maxlength="200" placeholder="Опрос по математике" />
+      <input
+        class="input"
+        type="text"
+        bind:value={title}
+        maxlength="200"
+        placeholder="Опрос по математике"
+      />
     </label>
 
     <fieldset>
       <legend>Срок действия</legend>
-      <div class="radios">
-        <label class="radio"
-          ><input type="radio" bind:group={durationPreset} value="1h" /> 1 час</label
-        >
-        <label class="radio"
-          ><input type="radio" bind:group={durationPreset} value="1d" /> 1 день</label
-        >
-        <label class="radio"
-          ><input type="radio" bind:group={durationPreset} value="7d" /> 1 неделя</label
-        >
-        <label class="radio"
-          ><input type="radio" bind:group={durationPreset} value="custom" /> Указать дату</label
-        >
+      <div class="segmented" role="radiogroup" aria-label="Срок действия">
+        {#each [['1h', '1 час'], ['1d', '1 день'], ['7d', '1 неделя'], ['custom', 'Дата']] as [v, label] (v)}
+          <button
+            type="button"
+            class="seg"
+            class:active={durationPreset === v}
+            role="radio"
+            aria-checked={durationPreset === v}
+            onclick={() => (durationPreset = v as typeof durationPreset)}
+          >
+            {label}
+          </button>
+        {/each}
       </div>
       {#if durationPreset === 'custom'}
-        <input type="datetime-local" bind:value={customExpiresAt} required />
+        <input class="input" type="datetime-local" bind:value={customExpiresAt} required />
       {/if}
     </fieldset>
 
-    <label class="check">
-      <input type="checkbox" bind:checked={caseSensitive} />
-      <span>Учитывать регистр (Россия и россия — разные слова)</span>
-    </label>
-
     <fieldset>
-      <legend>Цветовая схема облака</legend>
-      <div class="radios">
-        <label class="radio"
-          ><input type="radio" bind:group={colorScheme} value="mono" /> Чёрно-белая</label
-        >
-        <label class="radio"
-          ><input type="radio" bind:group={colorScheme} value="random" /> Случайные цвета бренда</label
-        >
-        <label class="radio"
-          ><input type="radio" bind:group={colorScheme} value="custom" /> Своя палитра</label
-        >
+      <legend>Цветовая схема</legend>
+      <div class="segmented" role="radiogroup" aria-label="Цветовая схема">
+        {#each [['mono', 'Чёрно-белая'], ['random', 'Цвета бренда'], ['custom', 'Своя палитра']] as [v, label] (v)}
+          <button
+            type="button"
+            class="seg"
+            class:active={colorScheme === v}
+            role="radio"
+            aria-checked={colorScheme === v}
+            onclick={() => (colorScheme = v as typeof colorScheme)}
+          >
+            {label}
+          </button>
+        {/each}
       </div>
       {#if colorScheme === 'custom'}
         <div class="palette">
           {#each customPalette as _, i (i)}
-            <div class="color-row">
-              <input type="color" bind:value={customPalette[i]} />
-              <input type="text" bind:value={customPalette[i]} pattern="^#[0-9A-Fa-f]{'{6}'}$" />
+            <div class="swatch">
+              <input type="color" bind:value={customPalette[i]} aria-label="Цвет" />
+              <input
+                class="input swatch-hex"
+                type="text"
+                bind:value={customPalette[i]}
+                pattern="^#[0-9A-Fa-f]{'{6}'}$"
+                aria-label="HEX-код"
+              />
               <button
                 type="button"
-                class="ghost mini"
+                class="btn btn-ghost btn-sm swatch-remove"
                 onclick={() => removeColor(i)}
-                disabled={customPalette.length === 1}>×</button
+                disabled={customPalette.length === 1}
+                aria-label="Удалить цвет"
               >
+                ×
+              </button>
             </div>
           {/each}
-          <button
-            type="button"
-            class="ghost"
-            onclick={addColor}
-            disabled={customPalette.length >= 10}
-          >
-            + Добавить цвет ({customPalette.length}/10)
-          </button>
+          {#if customPalette.length < 10}
+            <button type="button" class="btn btn-ghost btn-sm" onclick={addColor}>
+              + Добавить цвет ({customPalette.length}/10)
+            </button>
+          {/if}
         </div>
       {/if}
     </fieldset>
@@ -200,37 +226,60 @@
             <strong>Вопрос {i + 1}</strong>
             <button
               type="button"
-              class="ghost mini"
+              class="btn btn-ghost btn-sm"
               onclick={() => removeQuestion(i)}
-              disabled={questions.length === 1}>×</button
+              disabled={questions.length === 1}
+              aria-label="Удалить вопрос"
             >
+              ×
+            </button>
           </div>
           <textarea
+            class="input"
             bind:value={questions[i].text}
             required
             maxlength="500"
             placeholder="Опишите одним словом ваше настроение"
           ></textarea>
-          <div class="radios">
-            <label class="radio"
-              ><input type="radio" bind:group={questions[i].answerType} value="single" /> Одно слово</label
-            >
-            <label class="radio"
-              ><input type="radio" bind:group={questions[i].answerType} value="multi" /> Несколько слов</label
-            >
+          <div class="segmented" role="radiogroup" aria-label="Тип ответа">
+            {#each [['single', 'Одно слово'], ['multi', 'Несколько слов']] as [v, label] (v)}
+              <button
+                type="button"
+                class="seg seg-sm"
+                class:active={questions[i].answerType === v}
+                role="radio"
+                aria-checked={questions[i].answerType === v}
+                onclick={() => (questions[i].answerType = v as 'single' | 'multi')}
+              >
+                {label}
+              </button>
+            {/each}
           </div>
         </div>
       {/each}
-      <button type="button" class="ghost" onclick={addQuestion} disabled={questions.length >= 50}>
+      <button
+        type="button"
+        class="btn btn-ghost"
+        onclick={addQuestion}
+        disabled={questions.length >= 50}
+      >
         + Добавить вопрос
       </button>
     </fieldset>
 
+    <details class="advanced">
+      <summary>Дополнительно</summary>
+      <label class="check">
+        <input type="checkbox" bind:checked={caseSensitive} />
+        <span>Учитывать регистр (Россия и россия — разные слова)</span>
+      </label>
+    </details>
+
     {#if errorMessage}
-      <div class="error">{errorMessage}</div>
+      <div class="alert alert-error">{errorMessage}</div>
     {/if}
 
-    <button type="submit" class="primary" disabled={submitting}>
+    <button type="submit" class="btn btn-primary btn-lg" disabled={submitting}>
       {submitting ? 'Создаём…' : 'Создать опрос'}
     </button>
   </form>
@@ -249,19 +298,21 @@
     flex-direction: column;
     gap: var(--space-6);
   }
-  label,
-  fieldset {
+  label {
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
-    border: 0;
-    padding: 0;
-    margin: 0;
   }
   fieldset {
-    background: var(--c-surface);
+    border: 0;
     padding: var(--space-4);
+    margin: 0;
+    background: var(--c-surface);
     border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
   }
   legend {
     font-weight: 600;
@@ -273,59 +324,82 @@
     font-weight: 500;
     color: var(--c-text);
   }
-  input[type='text'],
-  input[type='datetime-local'],
-  textarea {
-    font-family: inherit;
-    font-size: 1rem;
-    padding: var(--space-3);
-    border: 1px solid var(--c-border);
-    border-radius: var(--radius);
-    background: var(--c-bg);
-    width: 100%;
-  }
-  input[type='color'] {
-    width: 48px;
-    height: 36px;
-    padding: 0;
-    border: 1px solid var(--c-border);
-    border-radius: var(--radius);
-  }
-  textarea {
+  textarea.input {
     min-height: 60px;
     resize: vertical;
   }
-  .radios {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-3);
-  }
-  .radio {
+
+  /* ─── Сегментированный контрол ──────────────────────── */
+  .segmented {
     display: inline-flex;
-    align-items: center;
-    gap: var(--space-2);
-    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 4px;
+    background: var(--c-bg);
+    border: 1px solid var(--c-border);
+    border-radius: var(--radius);
+    padding: 4px;
   }
-  .check {
-    flex-direction: row;
-    align-items: center;
-    gap: var(--space-3);
+  .seg {
+    flex: 1;
+    min-width: 0;
+    padding: 8px 14px;
+    background: transparent;
+    border: 0;
+    border-radius: 6px;
+    color: var(--c-muted);
+    font: 500 0.875rem/1.2 inherit;
+    cursor: pointer;
+    white-space: nowrap;
+    transition:
+      background-color 120ms,
+      color 120ms;
   }
+  .seg:hover:not(.active) {
+    background: var(--c-surface);
+    color: var(--c-text);
+  }
+  .seg.active {
+    background: var(--c-navy);
+    color: #fff;
+  }
+  .seg-sm {
+    padding: 6px 12px;
+    font-size: 0.8125rem;
+  }
+
+  /* ─── Палитра ──────────────────────── */
   .palette {
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
-    margin-top: var(--space-3);
+    margin-top: var(--space-2);
   }
-  .color-row {
+  .swatch {
     display: flex;
-    gap: var(--space-2);
     align-items: center;
+    gap: var(--space-2);
   }
-  .color-row input[type='text'] {
-    flex: 1;
-    max-width: 120px;
+  .swatch input[type='color'] {
+    width: 40px;
+    height: 36px;
+    padding: 0;
+    border: 1px solid var(--c-border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    background: transparent;
   }
+  .swatch-hex {
+    flex: 0 1 130px;
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+  }
+  .swatch-remove {
+    padding: 6px 12px;
+    font-size: 1.1rem;
+    line-height: 1;
+  }
+
+  /* ─── Вопросы ──────────────────────── */
   .question {
     background: var(--c-bg);
     border: 1px solid var(--c-border);
@@ -334,138 +408,126 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
-    margin-bottom: var(--space-3);
   }
   .q-head {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: var(--space-2);
   }
-  button {
-    background: var(--c-navy);
-    color: white;
-    border: 0;
-    padding: var(--space-3) var(--space-6);
-    border-radius: var(--radius);
+  .q-head strong {
     font-weight: 500;
-    font-size: 1rem;
   }
-  button.primary {
-    background: var(--c-navy);
-  }
-  button.ghost {
-    background: transparent;
-    color: var(--c-navy);
-    border: 1px solid var(--c-border);
-  }
-  button.mini {
-    padding: var(--space-1) var(--space-3);
-    font-size: 1.2rem;
-    line-height: 1;
-  }
-  button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-  a.primary {
-    background: var(--c-navy);
-    color: white;
-    padding: var(--space-3) var(--space-6);
-    border-radius: var(--radius);
-    text-decoration: none;
-    font-weight: 500;
-    display: inline-block;
-    margin-top: var(--space-3);
-  }
-  .error {
-    background: #fef2f2;
-    color: var(--c-danger);
-    padding: var(--space-3);
-    border-radius: var(--radius);
-    border: 1px solid #fecaca;
-  }
-  .card {
-    background: var(--c-surface);
+
+  /* ─── Результат ──────────────────────── */
+  .share {
+    display: flex;
+    gap: var(--space-6);
+    flex-wrap: wrap;
+    align-items: flex-start;
     padding: var(--space-6);
-    border-radius: var(--radius-lg);
-    margin-bottom: var(--space-4);
   }
-  .card h2 {
-    margin-top: 0;
-    font-size: 1rem;
+  .share-info {
+    flex: 1;
+    min-width: 240px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  .share-h {
+    font-size: 0.75rem;
     color: var(--c-muted);
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.06em;
     font-weight: 600;
+    margin: 0 0 var(--space-1);
   }
   .big-code {
-    font-size: 3rem;
+    font-size: 2.25rem;
     font-weight: 700;
     color: var(--c-navy);
     letter-spacing: 0.15em;
-    font-family: 'SF Mono', Menlo, monospace;
+    font-family: var(--font-mono);
+    margin-bottom: var(--space-4);
   }
   .link-row {
     display: flex;
-    gap: var(--space-3);
-    align-items: center;
-    flex-wrap: wrap;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-bottom: var(--space-4);
   }
   .link-row code {
-    flex: 1;
-    overflow-x: auto;
-    white-space: nowrap;
-    padding: var(--space-3);
-    font-size: 1rem;
+    padding: var(--space-2);
+    font-size: 0.875rem;
+    word-break: break-all;
+    line-height: 1.4;
   }
-  .link-row code.small {
-    font-size: 0.8rem;
+  .link-row .btn {
+    align-self: flex-start;
   }
   .qr {
-    margin-top: var(--space-4);
-    width: 256px;
-    height: 256px;
-    max-width: 100%;
+    width: 180px;
+    height: 180px;
     image-rendering: pixelated;
     border: 1px solid var(--c-border);
     border-radius: var(--radius);
+    background: #fff;
   }
 
-  @media (max-width: 480px) {
-    fieldset {
-      padding: var(--space-3);
+  /* ─── Дополнительно ──────────────────────── */
+  .advanced {
+    background: var(--c-surface);
+    border-radius: var(--radius);
+    padding: var(--space-3) var(--space-4);
+  }
+  .advanced summary {
+    cursor: pointer;
+    color: var(--c-muted);
+    font-size: 0.9375rem;
+    user-select: none;
+  }
+  .advanced[open] summary {
+    margin-bottom: var(--space-3);
+  }
+  .check {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-3);
+    cursor: pointer;
+  }
+  .check input {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--c-navy);
+  }
+
+  /* ─── Алерт ──────────────────────── */
+  .alert {
+    padding: var(--space-3);
+    border-radius: var(--radius);
+    border: 1px solid;
+    font-size: 0.95rem;
+  }
+  .alert-error {
+    background: var(--c-danger-bg);
+    color: var(--c-danger);
+    border-color: var(--c-danger-border);
+  }
+
+  @media (max-width: 640px) {
+    .seg {
+      flex-basis: calc(50% - 4px);
     }
-    .question {
-      padding: var(--space-3);
+    .share {
+      flex-direction: column-reverse;
+      align-items: center;
     }
-    .radios {
-      gap: var(--space-2);
-    }
-    button.primary,
-    a.primary {
-      width: 100%;
-      text-align: center;
-      padding: var(--space-4);
-    }
-    .big-code {
-      font-size: 2rem;
-      word-break: break-all;
-    }
-    .link-row {
-      flex-direction: column;
-      align-items: stretch;
-    }
-    .link-row code {
-      white-space: normal;
-      word-break: break-all;
-    }
-    .link-row button {
+    .share-info {
       width: 100%;
     }
     .qr {
-      width: 100%;
-      height: auto;
-      aspect-ratio: 1;
+      width: 200px;
+      height: 200px;
     }
   }
 </style>

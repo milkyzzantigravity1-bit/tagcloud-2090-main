@@ -112,18 +112,20 @@
 <svelte:head><title>{survey.title ?? 'Опрос ' + survey.code}</title></svelte:head>
 
 {#if screen === 'closed'}
-  <div class="centered">
+  <div class="state state-closed">
+    <div class="state-icon">⏳</div>
     <h1>Опрос завершён</h1>
-    <p class="muted">Голосование больше не принимается. Спасибо за интерес!</p>
+    <p class="muted">Голосование больше не принимается.</p>
   </div>
 {:else if screen === 'sent'}
-  <div class="centered">
-    <div class="check">✓</div>
+  <div class="state state-sent">
+    <div class="state-icon">✓</div>
     <h1>Спасибо!</h1>
     <p class="muted">Твой ответ записан. Облако появится у организатора.</p>
   </div>
 {:else if screen === 'already'}
-  <div class="centered">
+  <div class="state state-already">
+    <div class="state-icon">✓</div>
     <h1>Ты уже отвечал</h1>
     <p class="muted">Один человек — один ответ. Спасибо за участие!</p>
   </div>
@@ -146,6 +148,7 @@
 
         {#if q.answerType === 'single'}
           <input
+            class="input"
             type="text"
             value={answers[q.id][0] ?? ''}
             oninput={(e) => onSingleInput(q.id, e.currentTarget.value)}
@@ -160,6 +163,7 @@
             {#each answers[q.id] as _, idx (idx)}
               <div class="row">
                 <input
+                  class="input"
                   type="text"
                   value={answers[q.id][idx] ?? ''}
                   oninput={(e) => onMultiInput(q.id, idx, e.currentTarget.value)}
@@ -170,7 +174,7 @@
                 />
                 <button
                   type="button"
-                  class="ghost mini"
+                  class="btn btn-ghost btn-sm mini"
                   onclick={() => removeWord(q.id, idx)}
                   disabled={answers[q.id].length === 1}
                   aria-label="Удалить слово"
@@ -180,7 +184,7 @@
               </div>
             {/each}
             {#if answers[q.id].length < 20}
-              <button type="button" class="ghost" onclick={() => addWord(q.id)}>
+              <button type="button" class="btn btn-ghost btn-sm" onclick={() => addWord(q.id)}>
                 + слово ({answers[q.id].length}/20)
               </button>
             {/if}
@@ -190,10 +194,10 @@
     {/each}
 
     {#if errorMessage}
-      <div class="error">{errorMessage}</div>
+      <div class="alert alert-error">{errorMessage}</div>
     {/if}
 
-    <button type="submit" class="primary" disabled={screen === 'sending'}>
+    <button type="submit" class="btn btn-primary btn-lg" disabled={screen === 'sending'}>
       {screen === 'sending' ? 'Отправляем…' : 'Отправить'}
     </button>
   </form>
@@ -206,16 +210,26 @@
   .muted {
     color: var(--c-muted);
   }
-  .centered {
+
+  .state {
     text-align: center;
     padding: var(--space-12) 0;
   }
-  .check {
-    font-size: 4rem;
-    color: var(--c-blue);
+  .state-icon {
+    font-size: 3.5rem;
     line-height: 1;
     margin-bottom: var(--space-4);
   }
+  .state-sent .state-icon {
+    color: var(--c-success);
+  }
+  .state-already .state-icon {
+    color: var(--c-blue);
+  }
+  .state-closed .state-icon {
+    color: var(--c-muted);
+  }
+
   form {
     display: flex;
     flex-direction: column;
@@ -227,6 +241,7 @@
     border: 1px solid transparent;
     padding: var(--space-4);
     border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
@@ -234,7 +249,7 @@
   }
   .question.has-error {
     border-color: var(--c-danger);
-    background: #fef2f2;
+    background: var(--c-danger-bg);
   }
   legend {
     font-weight: 500;
@@ -246,25 +261,6 @@
     color: var(--c-muted);
     font-weight: 600;
     margin-right: var(--space-2);
-  }
-  input[type='text'] {
-    font-family: inherit;
-    font-size: 1rem;
-    padding: var(--space-3);
-    border: 1px solid var(--c-border);
-    border-radius: var(--radius);
-    background: var(--c-bg);
-    width: 100%;
-    min-width: 0;
-    /* предотвращает auto-zoom на iOS Safari (font-size <16px вызывает zoom) */
-    -webkit-appearance: none;
-    appearance: none;
-  }
-  /* iOS не зумит инпут с font-size >= 16px */
-  @supports (-webkit-touch-callout: none) {
-    input[type='text'] {
-      font-size: 16px;
-    }
   }
   .hint {
     color: var(--c-muted);
@@ -278,40 +274,29 @@
   .row {
     display: flex;
     gap: var(--space-2);
+    align-items: stretch;
   }
-  .row input {
+  .row .input {
     flex: 1;
+    min-width: 0;
   }
-  button {
-    background: var(--c-navy);
-    color: white;
-    border: 0;
-    padding: var(--space-3) var(--space-6);
-    border-radius: var(--radius);
-    font-weight: 500;
-    font-size: 1rem;
-    font-family: inherit;
-  }
-  button.ghost {
-    background: transparent;
-    color: var(--c-navy);
-    border: 1px solid var(--c-border);
-  }
-  button.mini {
-    padding: var(--space-2) var(--space-3);
+  .row .mini {
+    flex-shrink: 0;
+    min-width: 44px;
+    padding: 0;
     font-size: 1.2rem;
     line-height: 1;
   }
-  button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-  .error {
-    background: #fef2f2;
-    color: var(--c-danger);
+  .alert {
     padding: var(--space-3);
     border-radius: var(--radius);
-    border: 1px solid #fecaca;
+    border: 1px solid;
+    font-size: 0.95rem;
+  }
+  .alert-error {
+    background: var(--c-danger-bg);
+    color: var(--c-danger);
+    border-color: var(--c-danger-border);
   }
 
   @media (max-width: 480px) {
@@ -324,18 +309,11 @@
     legend {
       font-size: 1rem;
     }
-    button.primary {
+    .btn-lg {
       width: 100%;
-      padding: var(--space-4);
-      font-size: 1.0625rem;
     }
-    button.mini {
-      min-width: 44px;
+    .row .mini {
       min-height: 44px;
-      padding: 0;
-    }
-    .row {
-      gap: var(--space-2);
     }
   }
 </style>
